@@ -1,0 +1,13 @@
+{
+    "name": "vascalmod-auth",
+    "private": true,
+    "version": "1.0.0",
+    "type": "module",
+    "dependencies": {
+        "pg": "^8.13.1"
+    },
+    "devDependencies": {
+        "dotenv": "^18.0.4",
+        "tsx": "^4.23.15"
+    }
+}

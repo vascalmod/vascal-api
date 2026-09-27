@@ -1,0 +1,56 @@
+-- VascalMod auth backend — Postgres schema (Neon / Supabase free tier)
+-- Run once: psql $DATABASE_URL -f schema.sql
+
+-- License keys. Only SHA-256 hashes stored, never plaintext.
+CREATE TABLE IF NOT EXISTS keys (
+    id              BIGSERIAL PRIMARY KEY,
+    license_key_hash CHAR(64) NOT NULL UNIQUE,
+    plan            TEXT NOT NULL DEFAULT 'monthly',
+    expires_at      TIMESTAMPTZ NOT NULL,
+    bound_uid       BIGINT,                       -- game UID this key is locked to (NULL = unbound)
+    status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked','suspended')),
+    note            TEXT NOT NULL DEFAULT '',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- UID history per key. Feeds anomaly detection (UID hopping = shared key).
+CREATE TABLE IF NOT EXISTS devices (
+    id          BIGSERIAL PRIMARY KEY,
+    key_id      BIGINT NOT NULL REFERENCES keys(id) ON DELETE CASCADE,
+    uid         BIGINT NOT NULL,
+    first_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (key_id, uid)
+);
+
+-- Short-lived sessions (one row per minted token, keyed by JTI).
+CREATE TABLE IF NOT EXISTS sessions (
+    jti         TEXT PRIMARY KEY,                 -- token id, 128-bit hex
+    key_id      BIGINT NOT NULL REFERENCES keys(id) ON DELETE CASCADE,
+    uid         BIGINT NOT NULL,
+    build_tag   TEXT NOT NULL DEFAULT '',
+    issued_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at  TIMESTAMPTZ NOT NULL,
+    revoked     BOOLEAN NOT NULL DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS sessions_key_idx ON sessions (key_id);
+
+-- Versioned server-side offset tables.
+CREATE TABLE IF NOT EXISTS offsets (
+    game_version TEXT PRIMARY KEY,                -- e.g. '2.2.16.12322'
+    table_json   JSONB NOT NULL,                  -- { classes: {...}, fields: {...}, globals: {...} }
+    min_build    TEXT NOT NULL DEFAULT '',        -- oldest client build_tag allowed
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Audit trail: logins, heartbeats (sampled), anomalies, admin ops.
+CREATE TABLE IF NOT EXISTS events (
+    id          BIGSERIAL PRIMARY KEY,
+    key_id      BIGINT REFERENCES keys(id) ON DELETE SET NULL,
+    type        TEXT NOT NULL,                    -- login_ok, login_fail, heartbeat_ok, anomaly, revoke, ...
+    ip          TEXT NOT NULL DEFAULT '',
+    meta        JSONB NOT NULL DEFAULT '{}',
+    at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS events_key_idx ON events (key_id);
+CREATE INDEX IF NOT EXISTS events_at_idx ON events (at);
