@@ -54,3 +54,13 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS events_key_idx ON events (key_id);
 CREATE INDEX IF NOT EXISTS events_at_idx ON events (at);
+
+-- Published binaries for auto-update. url = public object URL (Supabase Storage).
+CREATE TABLE IF NOT EXISTS releases (
+    id          BIGSERIAL PRIMARY KEY,
+    tag         TEXT NOT NULL,                    -- cheat build tag, e.g. '1.0.0'
+    url         TEXT NOT NULL,
+    sha256      CHAR(64) NOT NULL,                -- hex of the exact binary
+    notes       TEXT NOT NULL DEFAULT '',
+    at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
