@@ -1,4 +1,4 @@
-import { db } from "../../lib/db.js";
+import { db, q } from "../../lib/db.js";
 import { logEvent, clientIp } from "../../lib/validate.js";
 
 function authed(req: Request): boolean {
@@ -13,7 +13,7 @@ export async function POST(req: Request): Promise<Response> {
     if (typeof b?.game_version !== "string" || typeof b?.table_json !== "object" || !b.table_json) {
         return Response.json({ error: "bad_request" }, { status: 400 });
     }
-    await db().query(
+    await q(
         `INSERT INTO offsets (game_version, table_json, min_build) VALUES ($1, $2, $3)
          ON CONFLICT (game_version) DO UPDATE SET table_json = $2, min_build = $3, created_at = now()`,
         [b.game_version, JSON.stringify(b.table_json), String(b?.min_build ?? "")]

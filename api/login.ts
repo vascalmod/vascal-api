@@ -1,4 +1,4 @@
-import { db } from "../lib/db.js";
+import { db, q } from "../lib/db.js";
 import { mintToken, newJti, TOKEN_TTL_SEC } from "../lib/token.js";
 import { consumeNonce } from "../lib/nonce.js";
 import { checkKey, logEvent, clientIp } from "../lib/validate.js";
@@ -33,7 +33,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     // Offsets ride INSIDE the authed answer — no anonymous offset endpoint exists.
-    const { rows } = await db().query(`SELECT table_json, min_build FROM offsets WHERE game_version = $1 LIMIT 1`, [
+    const { rows } = await q(`SELECT table_json, min_build FROM offsets WHERE game_version = $1 LIMIT 1`, [
         String(game_version ?? ""),
     ]);
     if (!rows.length) {
@@ -48,7 +48,7 @@ export async function POST(req: Request): Promise<Response> {
     const jti = newJti();
     const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SEC;
     const token = mintToken({ jti, uid: game_uid, key_id: v.key_id, build: String(build_tag ?? ""), over: String(game_version), exp });
-    await db().query(
+    await q(
         `INSERT INTO sessions (jti, key_id, uid, build_tag, expires_at) VALUES ($1, $2, $3, $4, to_timestamp($5))`,
         [jti, v.key_id, game_uid, String(build_tag ?? ""), exp]
     );

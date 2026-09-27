@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { db } from "../../lib/db.js";
+import { db, q } from "../../lib/db.js";
 
 // All admin ops: header `x-admin-secret: $ADMIN_SECRET`.
 
@@ -23,7 +23,7 @@ export async function POST(req: Request): Promise<Response> {
     const key = newKey();
     const hash = createHash("sha256").update(key, "utf8").digest("hex");
     const exp = new Date(Date.now() + days * 864e5).toISOString();
-    await db().query(`INSERT INTO keys (license_key_hash, plan, expires_at, note) VALUES ($1, $2, $3, $4)`, [
+    await q(`INSERT INTO keys (license_key_hash, plan, expires_at, note) VALUES ($1, $2, $3, $4)`, [
         hash,
         String(b?.plan ?? "monthly"),
         exp,
