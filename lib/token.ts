@@ -3,8 +3,9 @@ import { randomBytes, generateKeyPairSync, sign, verify, createPrivateKey, creat
 // Ed25519 session tokens: "v1.<base64url(payload)>.<base64url(sig)>"
 // Payload: { jti, uid, key_id, build, over, exp } — over = offsets version (game_version row id)
 
-const PRIV_PEM = process.env.TOKEN_PRIVKEY!; // PKCS8 PEM, server-only
-const PUB_PEM = process.env.TOKEN_PUBKEY!;   // SPKI PEM, also baked into the native client
+const deNL = (s: string) => s.replace(/\\n/g, "\n").trim();
+const PRIV_PEM = deNL(process.env.TOKEN_PRIVKEY!); // PKCS8 PEM, server-only
+const PUB_PEM = deNL(process.env.TOKEN_PUBKEY!); // SPKI PEM, also baked into the native client
 
 export const TOKEN_TTL_SEC = 12 * 60; // 12-minute sessions, refreshed by heartbeat
 
