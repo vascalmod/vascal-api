@@ -26,10 +26,10 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     const v = await checkKey(license_key, game_uid);
-    if (!v.ok) {
-        await logEvent(null, "login_fail", ip, { code: v.code, uid: game_uid });
-        const status = v.code === "rate_limited" ? 429 : 401;
-        return Response.json({ error: v.code }, { status });
+    if (v.ok === false) {
+        const code: string = v.code;
+        await logEvent(null, "login_fail", ip, { code, uid: game_uid });
+        return Response.json({ error: code }, { status: 401 });
     }
 
     // Offsets ride INSIDE the authed answer — no anonymous offset endpoint exists.

@@ -4,10 +4,8 @@
     "version": "1.0.0",
     "type": "module",
     "dependencies": {
+        "@types/node": "^22.9.0",
         "pg": "^8.13.1"
-    },
-    "devDependencies": {
-        "@types/node": "^22.9.0"
     },
     "devDependencies": {
         "dotenv": "^18.0.4",

@@ -1,4 +1,4 @@
-import { db, sha256Hex } from "./db.js";
+import { db, sha256Hex, q } from "./db.js";
 
 // Shared verdict used by login + heartbeat. Fail-closed: any null = reject.
 
