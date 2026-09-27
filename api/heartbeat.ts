@@ -37,12 +37,13 @@ export async function POST(req: Request): Promise<Response> {
     // Rotate: revoke old JTI, mint fresh.
     const jti = newJti();
     const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SEC;
+    const keyId = Number(claims.key_id);
     await q(`UPDATE sessions SET revoked = TRUE WHERE jti = $1`, [claims.jti]);
     await q(
         `INSERT INTO sessions (jti, key_id, uid, build_tag, expires_at) VALUES ($1, $2, $3, $4, to_timestamp($5))`,
-        [jti, claims.key_id, game_uid, claims.build, exp]
+        [jti, keyId, game_uid, claims.build, exp]
     );
-    const fresh = mintToken({ jti, uid: game_uid, key_id: claims.key_id, build: claims.build, over: claims.over, exp });
+    const fresh = mintToken({ jti, uid: game_uid, key_id: keyId, build: claims.build, over: claims.over, exp });
 
     return Response.json({ ok: true, token: fresh, expires_in: TOKEN_TTL_SEC });
 }

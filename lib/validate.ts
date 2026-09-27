@@ -18,14 +18,16 @@ export async function checkKey(license_key: string, uid: number): Promise<Verdic
     if (new Date(k.expires_at).getTime() < Date.now()) return { ok: false, code: "expired" };
 
     // UID lock: first login binds, later logins must match (reset via admin).
+    // NOTE: pg returns BIGINT as string — normalize to Number for token claims.
+    const keyId = Number(k.id);
     if (k.bound_uid === null) {
-        await q(`UPDATE keys SET bound_uid = $1 WHERE id = $2`, [uid, k.id]);
+        await q(`UPDATE keys SET bound_uid = $1 WHERE id = $2`, [uid, keyId]);
         await q(
             `INSERT INTO devices (key_id, uid) VALUES ($1, $2)
              ON CONFLICT (key_id, uid) DO UPDATE SET last_seen = now()`,
             [k.id, uid]
         );
-        return { ok: true, key_id: k.id, plan: k.plan, expires_at: k.expires_at, bound_uid: uid };
+        return { ok: true, key_id: keyId, plan: k.plan, expires_at: k.expires_at, bound_uid: uid };
     }
     if (Number(k.bound_uid) !== uid) {
         await q(
@@ -39,7 +41,7 @@ export async function checkKey(license_key: string, uid: number): Promise<Verdic
          ON CONFLICT (key_id, uid) DO UPDATE SET last_seen = now()`,
         [k.id, uid]
     );
-    return { ok: true, key_id: k.id, plan: k.plan, expires_at: k.expires_at, bound_uid: Number(k.bound_uid) };
+    return { ok: true, key_id: keyId, plan: k.plan, expires_at: k.expires_at, bound_uid: Number(k.bound_uid) };
 }
 
 export async function logEvent(key_id: number | null, type: string, ip: string, meta: object = {}): Promise<void> {
