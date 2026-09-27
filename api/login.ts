@@ -1,8 +1,8 @@
-import { db } from "../lib/db";
-import { mintToken, newJti, TOKEN_TTL_SEC } from "../lib/token";
-import { consumeNonce } from "../lib/nonce";
-import { checkKey, logEvent, clientIp } from "../lib/validate";
-import { throttle } from "../lib/rate-limit";
+import { db } from "../lib/db.js";
+import { mintToken, newJti, TOKEN_TTL_SEC } from "../lib/token.js";
+import { consumeNonce } from "../lib/nonce.js";
+import { checkKey, logEvent, clientIp } from "../lib/validate.js";
+import { throttle } from "../lib/rate-limit.js";
 
 // POST /api/login { license_key, game_uid, build_tag, game_version, nonce }
 // -> 200 { token, offsets, expires_in } | 4xx { error }

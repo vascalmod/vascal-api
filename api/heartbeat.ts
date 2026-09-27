@@ -1,7 +1,7 @@
-import { db } from "../lib/db";
-import { verifyToken, mintToken, newJti, TOKEN_TTL_SEC } from "../lib/token";
-import { logEvent, clientIp } from "../lib/validate";
-import { throttle } from "../lib/rate-limit";
+import { db } from "../lib/db.js";
+import { verifyToken, mintToken, newJti, TOKEN_TTL_SEC } from "../lib/token.js";
+import { logEvent, clientIp } from "../lib/validate.js";
+import { throttle } from "../lib/rate-limit.js";
 
 // POST /api/heartbeat { token, game_uid }
 // -> 200 { ok: true, token, offsets_delta?, expires_in } | 401 { ok: false, error }

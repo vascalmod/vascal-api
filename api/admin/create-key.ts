@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { db } from "../../lib/db";
+import { db } from "../../lib/db.js";
 
 // All admin ops: header `x-admin-secret: $ADMIN_SECRET`.
 

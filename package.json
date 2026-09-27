@@ -7,6 +7,9 @@
         "pg": "^8.13.1"
     },
     "devDependencies": {
+        "@types/node": "^22.9.0"
+    },
+    "devDependencies": {
         "dotenv": "^18.0.4",
         "tsx": "^4.23.15"
     }

@@ -1,5 +1,5 @@
-import { db, sha256Hex } from "../../lib/db";
-import { logEvent, clientIp } from "../../lib/validate";
+import { db, sha256Hex } from "../../lib/db.js";
+import { logEvent, clientIp } from "../../lib/validate.js";
 
 function authed(req: Request): boolean {
     return req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET;
