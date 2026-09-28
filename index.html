@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VascalMod — MLBB Kernel</title>
+<style>
+  body { background: #0c0e12; color: #e8eaf0; font-family: system-ui, sans-serif; margin: 0; }
+  main { max-width: 640px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  p.sub { color: #9aa0b0; margin-top: 0; }
+  .card { background: #14171e; border: 1px solid #232833; border-radius: 12px; padding: 20px; margin: 16px 0; }
+  a.btn { display: inline-block; background: #2f6bff; color: #fff; text-decoration: none; padding: 12px 22px; border-radius: 8px; font-weight: 600; }
+  a.btn.ghost { background: transparent; border: 1px solid #2f6bff; }
+  ul { padding-left: 20px; color: #c6cbd8; }
+  li { margin: 6px 0; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+  small { color: #6b7280; }
+</style>
+</head>
+<body>
+<main>
+  <h1>VascalMod</h1>
+  <p class="sub">MLBB kernel overlay — ESP, retribution assist, minimap intelligence, room insights.</p>
+  <div class="card">
+    <div id="dl">Checking latest release…</div>
+    <div class="row">
+      <a class="btn" id="dlbtn" href="#" style="display:none">Download</a>
+      <a class="btn ghost" href="/account">Manage license</a>
+    </div>
+  </div>
+  <div class="card">
+    <ul>
+      <li>One license, one game account — move it yourself anytime.</li>
+      <li>Automatic updates on every launch.</li>
+      <li>Kernel and no-driver modes.</li>
+    </ul>
+  </div>
+  <small>Support via your seller. Keep your license key private.</small>
+</main>
+<script>
+fetch("/api/version").then(r => r.json()).then(v => {
+  const el = document.getElementById("dl");
+  const btn = document.getElementById("dlbtn");
+  if (v && v.latest) {
+    el.textContent = "Latest: " + v.latest + (v.notes ? " — " + v.notes : "");
+    if (v.url) { btn.href = v.url; btn.style.display = "inline-block"; }
+  } else el.textContent = "Release info unavailable.";
+}).catch(() => { document.getElementById("dl").textContent = "Release info unavailable."; });
+</script>
+</body>
+</html>

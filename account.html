@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manage license — VascalMod</title>
+<style>
+  body { background: #0c0e12; color: #e8eaf0; font-family: system-ui, sans-serif; margin: 0; }
+  main { max-width: 560px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 24px; }
+  .card { background: #14171e; border: 1px solid #232833; border-radius: 12px; padding: 20px; margin: 16px 0; }
+  input { width: 100%; box-sizing: border-box; background: #0c0e12; border: 1px solid #333a48; color: #fff; padding: 12px; border-radius: 8px; font-size: 15px; }
+  button { background: #2f6bff; color: #fff; border: 0; padding: 12px 22px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+  button.danger { background: #b3261e; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; color: #c6cbd8; }
+  .msg { margin-top: 12px; min-height: 20px; color: #9aa0b0; }
+  .msg.err { color: #ff8a80; }
+  .msg.ok { color: #7dcea0; }
+  a { color: #7da2ff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Manage license</h1>
+  <div class="card">
+    <input id="key" type="text" placeholder="VSC-XXXXXXXXXXXXXXXX" autocomplete="off">
+    <button id="check">Check status</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="card" id="status" style="display:none">
+    <div class="row"><span>Plan</span><b id="s_plan"></b></div>
+    <div class="row"><span>Expires</span><b id="s_exp"></b></div>
+    <div class="row"><span>Bound account</span><b id="s_uid"></b></div>
+    <div class="row"><span>Resets left today</span><b id="s_left"></b></div>
+    <button class="danger" id="reset">Unbind account</button>
+  </div>
+  <a href="/">← back</a>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const key = () => $("key").value.trim();
+function say(t, cls) { const m = $("msg"); m.textContent = t; m.className = "msg " + (cls || ""); }
+$("check").onclick = async () => {
+  if (!key()) return say("Enter your license key.", "err");
+  say("Checking…");
+  try {
+    const r = await fetch("/api/self/status", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ license_key: key() }) });
+    const j = await r.json();
+    if (!r.ok) {
+      $("status").style.display = "none";
+      return say({ bad_key: "Key not found.", revoked: "Key revoked. Contact the seller.", rate_limited: "Too many tries. Wait a minute." }[j.error] || "Lookup failed.", "err");
+    }
+    $("s_plan").textContent = j.plan;
+    $("s_exp").textContent = new Date(j.expires_at).toLocaleDateString();
+    $("s_uid").textContent = j.bound_uid_masked;
+    $("s_left").textContent = j.resets_left_today;
+    $("status").style.display = "block";
+    say("");
+  } catch { say("Network error.", "err"); }
+};
+$("reset").onclick = async () => {
+  if (!confirm("Unbind the current game account? The next login binds the new one.")) return;
+  say("Working…");
+  try {
+    const r = await fetch("/api/self/reset-uid", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ license_key: key() }) });
+    const j = await r.json();
+    if (!r.ok) return say({ bad_key: "Key not found.", revoked: "Key revoked.", limit_reached: "Daily reset limit reached. Try tomorrow." }[j.error] || "Reset failed.", "err");
+    say("Unbound. Log in from the new account.", "ok");
+    $("check").onclick();
+  } catch { say("Network error.", "err"); }
+};
+</script>
+</body>
+</html>
