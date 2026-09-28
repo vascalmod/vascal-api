@@ -206,7 +206,12 @@ $("e_go").onclick = events;
 $("m_go").onclick = async () => {
   try {
     const j = await call("/api/admin/create-key", { plan: $("m_plan").value, days: Number($("m_days").value), note: $("m_note").value });
-    say("mmsg", j.license_key ? "Created: " + j.license_key + " (copy now — shown once)" : "Failed: " + (j.error||"?"), j.license_key ? "ok" : "err");
+    if (j.license_key) {
+      say("mmsg", "", "ok");
+      $("mmsg").innerHTML = `Created: <b style="font-family:monospace">${j.license_key}</b> ` +
+        `<button id="copykey" style="padding:4px 12px;font-size:12px">copy</button> <small class="dim">shown once</small>`;
+      $("copykey").onclick = () => { navigator.clipboard.writeText(j.license_key); say("mmsg", "Copied. It will never be shown again.", "ok"); };
+    } else say("mmsg", "Failed: " + (j.error||"?"), "err");
     if (j.license_key) { load(); stats(); }
   } catch(e) { say("mmsg", e.message, "err"); }
 };
