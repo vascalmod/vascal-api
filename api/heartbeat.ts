@@ -30,7 +30,7 @@ export async function POST(req: Request): Promise<Response> {
     const { rows } = await q(`SELECT key_id, revoked FROM sessions WHERE jti = $1 LIMIT 1`, [claims.jti]);
     if (!rows.length || rows[0].revoked) return Response.json({ ok: false, error: "revoked" }, { status: 401 });
 
-    const k = await q(`SELECT status, expires_at FROM keys WHERE id = $1 LIMIT 1`, [claims.key_id]);
+    const k = await q(`SELECT status, expires_at FROM keys WHERE kuuid = $1 LIMIT 1`, [claims.key_id]);
     if (!k.rows.length || k.rows[0].status !== "active") return Response.json({ ok: false, error: "revoked" }, { status: 401 });
     if (new Date(k.rows[0].expires_at).getTime() < Date.now()) {
         return Response.json({ ok: false, error: "expired" }, { status: 401 });
@@ -43,7 +43,7 @@ export async function POST(req: Request): Promise<Response> {
             const want = sr.rows.length && sr.rows[0].seals ? sr.rows[0].seals.trust : null;
             if (typeof want === "string" && want.length === 64 && b.seal.toLowerCase() !== want.toLowerCase()) {
                 await q(`UPDATE sessions SET revoked = TRUE WHERE key_id = $1`, [Number(claims.key_id)]);
-                await logEvent(Number(claims.key_id), "anomaly", ip, { reason: "seal_mismatch", build: claims.build });
+                await logEvent(String(claims.key_id), "anomaly", ip, { reason: "seal_mismatch", build: claims.build });
                 return Response.json({ ok: false, error: "revoked" }, { status: 401 });
             }
         } catch {
@@ -54,7 +54,7 @@ export async function POST(req: Request): Promise<Response> {
     // Rotate: revoke old JTI, mint fresh.
     const jti = newJti();
     const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SEC;
-    const keyId = Number(claims.key_id);
+    const keyId = String(claims.key_id);
     await q(`UPDATE sessions SET revoked = TRUE WHERE jti = $1`, [claims.jti]);
     await q(
         `INSERT INTO sessions (jti, key_id, uid, build_tag, expires_at) VALUES ($1, $2, $3, $4, to_timestamp($5))`,

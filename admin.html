@@ -150,16 +150,16 @@ async function stats() {
 }
 function renderRows() {
   const q = $("q").value.toLowerCase();
-  const rows = CACHE.filter(k => !q || (k.note||"").toLowerCase().includes(q) || (k.plan||"").includes(q) || String(k.bound_uid||"").includes(q) || String(k.id) === q || String(k.kuuid||"").toLowerCase().includes(q) || (k.key_prefix||"").toLowerCase().includes(q) || (k.key_suffix||"").toLowerCase().includes(q));
+  const rows = CACHE.filter(k => !q || (k.note||"").toLowerCase().includes(q) || (k.plan||"").includes(q) || String(k.bound_uid||"").includes(q) || String(k.kuuid||"").toLowerCase().includes(q) || String(k.kuuid||"").toLowerCase().includes(q) || (k.key_prefix||"").toLowerCase().includes(q) || (k.key_suffix||"").toLowerCase().includes(q));
   $("rows").innerHTML = rows.map(k => {
     const fp = k.key_prefix ? (k.key_prefix + "…" + (k.key_suffix || "")) : "—";
-    const ku = k.kuuid ? String(k.kuuid).slice(0, 8) : ("#" + k.id);
+    const ku = k.kuuid ? String(k.kuuid).slice(0, 8) : (k.kuuid ? String(k.kuuid).slice(0, 8) : "—");
     return `<tr><td style="font-family:monospace">${ku}</td><td style="font-family:monospace">${fp}</td><td>${esc(k.plan)}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
     `<td>${k.bound_uid ?? "—"}</td><td>${k.devices}</td><td>${k.last_seen ? fmtT(k.last_seen) : "—"}</td>` +
     `<td><span class="pill ${k.status}">${k.status}</span></td><td>${esc((k.note||"").slice(0,28))}</td>` +
-    `<td class="rowbtns"><button data-e="${k.id}">events</button><button data-s="${k.id}">show</button><button data-r="${k.id}">reset</button>` +
-    (k.status === "active" ? ` <button data-v="${k.id}" class="danger revoke">revoke</button>` : "") +
-    ` <button data-d="${k.id}" class="danger del">delete</button></td></tr>`;
+    `<td class="rowbtns"><button data-e="${k.kuuid}">events</button><button data-s="${k.kuuid}">show</button><button data-r="${k.kuuid}">reset</button>` +
+    (k.status === "active" ? ` <button data-v="${k.kuuid}" class="danger revoke">revoke</button>` : "") +
+    ` <button data-d="${k.kuuid}" class="danger del">delete</button></td></tr>`;
   }).join("") || `<tr><td colspan="10">no keys</td></tr>`;
   document.querySelectorAll(".revoke").forEach(b => b.onclick = () => modKey("revoke-key", b.dataset.v, {}, "Revoke key #"+b.dataset.v+"? Sessions die immediately."));
   document.querySelectorAll(".reset").forEach(b => b.onclick = () => modKey("reset-uid", b.dataset.r, {}, "Clear UID lock on key #"+b.dataset.r+"?"));
@@ -188,7 +188,7 @@ async function modKey(ep, id, extra, msg) {
   if (msg && !confirm(msg)) return;
   say("kmsg", "Working…");
   try {
-    const j = await call("/api/admin/" + ep, Object.assign({ id: Number(id) }, extra));
+    const j = await call("/api/admin/" + ep, Object.assign({ id }, extra));
     say("kmsg", j.ok ? "Done." : ("Failed: " + (j.error || "?")), j.ok ? "ok" : "err");
     if (j.ok) { load(); stats(); }
   } catch(e) { say("kmsg", e.message, "err"); }

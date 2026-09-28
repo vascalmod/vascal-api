@@ -2,16 +2,17 @@
 -- Run once: psql $DATABASE_URL -f schema.sql
 
 -- License keys. Only SHA-256 hashes stored, never plaintext.
+-- kuuid is the primary key (non-sequential public face). key_enc holds
+-- AES-GCM sealed plaintext for admin reveal; prefix/suffix for identification.
 CREATE TABLE IF NOT EXISTS keys (
-    id              BIGSERIAL PRIMARY KEY,            -- internal, never exposed
-    kuuid           UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE, -- public face
+    kuuid           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     license_key_hash CHAR(64) NOT NULL UNIQUE,
-    key_prefix      CHAR(8) NOT NULL DEFAULT '',   -- first 8 chars, identification only
-    key_suffix      CHAR(4) NOT NULL DEFAULT '',   -- last 4 chars, identification only
-    key_enc         TEXT NOT NULL DEFAULT '',     -- AES-GCM sealed plaintext (ADMIN_SECRET KEK)
+    key_prefix      CHAR(8) NOT NULL DEFAULT '',
+    key_suffix      CHAR(4) NOT NULL DEFAULT '',
+    key_enc         TEXT NOT NULL DEFAULT '',
     plan            TEXT NOT NULL DEFAULT 'monthly',
     expires_at      TIMESTAMPTZ NOT NULL,
-    bound_uid       BIGINT,                       -- game UID this key is locked to (NULL = unbound)
+    bound_uid       BIGINT,
     status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked','suspended')),
     note            TEXT NOT NULL DEFAULT '',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -20,7 +21,7 @@ CREATE TABLE IF NOT EXISTS keys (
 -- UID history per key. Feeds anomaly detection (UID hopping = shared key).
 CREATE TABLE IF NOT EXISTS devices (
     id          BIGSERIAL PRIMARY KEY,
-    key_id      BIGINT NOT NULL REFERENCES keys(id) ON DELETE CASCADE,
+    key_id      UUID NOT NULL REFERENCES keys(kuuid) ON DELETE CASCADE,
     uid         BIGINT NOT NULL,
     first_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
     last_seen   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -30,7 +31,7 @@ CREATE TABLE IF NOT EXISTS devices (
 -- Short-lived sessions (one row per minted token, keyed by JTI).
 CREATE TABLE IF NOT EXISTS sessions (
     jti         TEXT PRIMARY KEY,                 -- token id, 128-bit hex
-    key_id      BIGINT NOT NULL REFERENCES keys(id) ON DELETE CASCADE,
+    key_id      UUID NOT NULL REFERENCES keys(kuuid) ON DELETE CASCADE,
     uid         BIGINT NOT NULL,
     build_tag   TEXT NOT NULL DEFAULT '',
     issued_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS offsets (
 -- Audit trail: logins, heartbeats (sampled), anomalies, admin ops.
 CREATE TABLE IF NOT EXISTS events (
     id          BIGSERIAL PRIMARY KEY,
-    key_id      BIGINT REFERENCES keys(id) ON DELETE SET NULL,
+    key_id      UUID REFERENCES keys(kuuid) ON DELETE SET NULL,
     type        TEXT NOT NULL,                    -- login_ok, login_fail, heartbeat_ok, anomaly, revoke, ...
     ip          TEXT NOT NULL DEFAULT '',
     meta        JSONB NOT NULL DEFAULT '{}',

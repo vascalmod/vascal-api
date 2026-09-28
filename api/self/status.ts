@@ -25,7 +25,7 @@ export async function POST(req: Request): Promise<Response> {
     if (typeof b?.license_key !== "string") return Response.json({ error: "bad_request" }, { status: 400 });
     const hash = await sha256Hex(String(b.license_key).trim());
     const { rows } = await db().query(
-        `SELECT id, plan, expires_at, bound_uid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
+        `SELECT kuuid, plan, expires_at, bound_uid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
         [hash]
     );
     if (!rows.length) return Response.json({ error: "bad_key" }, { status: 401 });
@@ -33,7 +33,7 @@ export async function POST(req: Request): Promise<Response> {
     if (k.status !== "active") return Response.json({ error: "revoked" }, { status: 401 });
     const rc = await db().query(
         `SELECT count(*)::int AS n FROM events WHERE key_id = $1 AND type = 'uid_reset_self' AND at > now() - interval '24 hours'`,
-        [k.id]
+        [k.kuuid]
     );
     const used = rc.rows[0]?.n ?? 0;
     return Response.json({
