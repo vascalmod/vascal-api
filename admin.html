@@ -5,51 +5,84 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin — VascalMod</title>
 <style>
-  :root { --bg:#0a0c10; --card:#12151c; --line:#222836; --txt:#eceef4; --mut:#98a0b3; --acc:#2f6bff; --ok:#37c978; --bad:#ff8a80; --danger:#b3261e; }
+  :root { --bg:#0a0c10; --card:#12151c; --line:#222836; --txt:#eceef4; --mut:#98a0b3; --acc:#2f6bff; --ok:#37c978; --bad:#ff8a80; --danger:#b3261e; --warn:#e2a63d; }
   * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--txt); font-family: system-ui, sans-serif; margin: 0; }
-  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
-  h1 { font-size: 22px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 14px 0; }
-  input, select, textarea { width: 100%; background: var(--bg); border: 1px solid #333a48; color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; margin: 6px 0; font-family: monospace; }
-  textarea { min-height: 120px; }
-  button { background: var(--acc); color: #fff; border: 0; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; margin: 6px 6px 0 0; }
+  body { background: var(--bg); color: var(--txt); font-family: system-ui, -apple-system, sans-serif; margin: 0; }
+  main { max-width: 1020px; margin: 0 auto; padding: 28px 16px 64px; }
+  h1 { font-size: clamp(20px, 4.5vw, 26px); margin: 0; }
+  .sub { color: var(--mut); font-size: 13px; margin: 4px 0 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 14px 0; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background: #0e1118; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .stat b { font-size: 22px; display: block; }
+  .stat small { color: var(--mut); }
+  input, select, textarea { width: 100%; background: var(--bg); border: 1px solid #333a48; color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; margin: 6px 0; font-family: ui-monospace, monospace; }
+  textarea { min-height: 110px; }
+  button { background: var(--acc); color: #fff; border: 0; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; margin: 6px 6px 0 0; font-size: 14px; }
   button.danger { background: var(--danger); }
   button.ghost { background: transparent; border: 1px solid var(--acc); }
   button:disabled { opacity: .5; }
-  .tabs { display: flex; gap: 8px; margin: 16px 0; }
+  .tabs { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
   .tabs button.on { background: #1c3263; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #1a1f2a; }
-  th { color: var(--mut); font-weight: 600; }
+  .tblwrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid #1a1f2a; white-space: nowrap; }
+  th { color: var(--mut); font-weight: 600; position: sticky; top: 0; background: var(--card); }
   .msg { min-height: 20px; font-size: 13px; color: var(--mut); margin-top: 8px; }
   .msg.err { color: var(--bad); } .msg.ok { color: var(--ok); }
-  .pill { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); }
-  .pill.active { color: var(--ok); border-color: #1e4d36; } .pill.revoked { color: var(--bad); border-color: #5c2320; }
-  .rowbtns button { padding: 4px 10px; font-size: 12px; }
-  small { color: var(--mut); }
+  .pill { font-size: 11px; padding: 2px 9px; border-radius: 99px; border: 1px solid var(--line); }
+  .pill.active { color: var(--ok); border-color: #1e4d36; }
+  .pill.revoked { color: var(--bad); border-color: #5c2320; }
+  .pill.suspended { color: var(--warn); border-color: #5c4a20; }
+  .rowbtns button { padding: 4px 10px; font-size: 12px; margin: 2px 4px 2px 0; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .toolbar input, .toolbar select { width: auto; flex: 1; min-width: 130px; }
+  .etype-anomaly { color: var(--bad); font-weight: 700; }
+  .etype-login_ok { color: var(--ok); }
+  small.dim { color: var(--mut); }
 </style>
 </head>
 <body>
 <main>
   <h1>Admin console</h1>
+  <p class="sub">Keys · events · offsets · releases — one locked room.</p>
   <div class="card" id="lock">
     <input id="secret" type="password" placeholder="Admin secret" autocomplete="off">
     <button id="unlock">Unlock</button>
     <div class="msg" id="lockmsg"></div>
   </div>
   <div id="app" style="display:none">
+    <div class="stats">
+      <div class="stat"><b id="st_active">–</b><small>active keys</small></div>
+      <div class="stat"><b id="st_exp">–</b><small>expiring ≤7d</small></div>
+      <div class="stat"><b id="st_anom">–</b><small>anomalies 24h</small></div>
+      <div class="stat"><b id="st_log">–</b><small>logins 24h</small></div>
+    </div>
     <div class="tabs">
       <button class="on" data-t="keys">Keys</button>
+      <button data-t="events">Events</button>
       <button data-t="make">Create</button>
       <button data-t="off">Offsets</button>
       <button data-t="rel">Release</button>
     </div>
     <div class="card" id="t-keys">
-      <div><select id="f_status"><option value="">all</option><option value="active">active</option><option value="revoked">revoked</option><option value="suspended">suspended</option></select>
-      <button class="ghost" id="reload">Reload</button></div>
-      <table><thead><tr><th>ID</th><th>Plan</th><th>Expires</th><th>UID</th><th>Dev</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+      <div class="toolbar">
+        <input id="q" placeholder="filter note / plan / uid…">
+        <select id="f_status"><option value="">all</option><option value="active">active</option><option value="revoked">revoked</option><option value="suspended">suspended</option></select>
+        <button class="ghost" id="reload">Reload</button>
+      </div>
+      <div class="tblwrap"><table><thead><tr><th>ID</th><th>Plan</th><th>Expires</th><th>UID</th><th>Dev</th><th>Seen</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
       <div class="msg" id="kmsg"></div>
+    </div>
+    <div class="card" id="t-events" style="display:none">
+      <div class="toolbar">
+        <input id="e_key" placeholder="key id (blank = all)" style="max-width:140px">
+        <select id="e_type" style="max-width:170px"><option value="">all types</option><option>login_ok</option><option>login_fail</option><option>anomaly</option><option>uid_reset_self</option><option>uid_reset</option><option>revoke</option><option>key_deleted</option><option>reset_denied</option><option>offsets_push</option><option>release_push</option></select>
+        <button class="ghost" id="e_go">Load</button>
+      </div>
+      <div class="tblwrap"><table><thead><tr><th>Time</th><th>Key</th><th>Type</th><th>IP</th><th>Meta</th></tr></thead><tbody id="erows"></tbody></table></div>
+      <div class="msg" id="emsg"></div>
     </div>
     <div class="card" id="t-make" style="display:none">
       <input id="m_plan" value="monthly">
@@ -60,13 +93,13 @@
     </div>
     <div class="card" id="t-off" style="display:none">
       <input id="o_ver" placeholder="game version, e.g. 2.2.16.12322">
-      <input id="o_min" placeholder="min build, e.g. 1.0.4">
+      <input id="o_min" placeholder="min build, e.g. 1.0.5">
       <textarea id="o_json" placeholder='{"Symbol":"0x…", …}'></textarea>
       <button id="o_go">Push offsets</button>
       <div class="msg" id="omsg"></div>
     </div>
     <div class="card" id="t-rel" style="display:none">
-      <input id="r_tag" placeholder="tag, e.g. 1.0.5">
+      <input id="r_tag" placeholder="tag, e.g. 1.0.6">
       <input id="r_url" placeholder="public binary URL">
       <input id="r_hash" placeholder="sha256 hex">
       <input id="r_notes" placeholder="notes">
@@ -78,9 +111,11 @@
 </main>
 <script>
 let S = sessionStorage.getItem("adm") || "";
+let CACHE = [];
 const $ = id => document.getElementById(id);
 const H = () => ({ "Content-Type": "application/json", "x-admin-secret": S });
 function say(id, t, cls) { const m = $(id); m.textContent = t; m.className = "msg " + (cls || ""); }
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 async function call(path, body, method) {
   const r = await fetch(path, { method: method || (body ? "POST" : "GET"), headers: H(), body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({}));
@@ -89,43 +124,86 @@ async function call(path, body, method) {
 }
 $("unlock").onclick = async () => {
   S = $("secret").value; sessionStorage.setItem("adm", S); $("secret").value = "";
-  try { await load(); $("lock").style.display = "none"; $("app").style.display = "block"; }
+  try { await load(); await stats(); await events(); $("lock").style.display = "none"; $("app").style.display = "block"; }
   catch { say("lockmsg", "Wrong secret.", "err"); S = ""; sessionStorage.removeItem("adm"); }
 };
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
   b.classList.add("on");
-  ["keys","make","off","rel"].forEach(t => $("t-"+t).style.display = t === b.dataset.t ? "block" : "none");
+  ["keys","events","make","off","rel"].forEach(t => $("t-"+t).style.display = t === b.dataset.t ? "block" : "none");
 });
-async function load() {
-  const st = $("f_status").value;
-  const j = await call("/api/admin/list-keys?status=" + encodeURIComponent(st) + "&limit=100");
-  if (j.error) throw new Error(j.error);
-  $("rows").innerHTML = j.keys.map(k =>
-    `<tr><td>${k.id}</td><td>${k.plan}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
-    `<td>${k.bound_uid ?? "—"}</td><td>${k.devices}</td>` +
-    `<td><span class="pill ${k.status}">${k.status}</span></td><td>${(k.note||"").slice(0,24)}</td>` +
-    `<td class="rowbtns"><button data-r="${k.id}" class="reset">reset</button> ` +
-    (k.status === "active" ? `<button data-v="${k.id}" class="danger revoke">revoke</button>` : "") + `</td></tr>`).join("");
-  document.querySelectorAll(".revoke").forEach(b => b.onclick = () => adminKey(b, "revoke-key", "Revoke key #"+b.dataset.v+"? Their sessions die immediately."));
-  document.querySelectorAll(".reset").forEach(b => b.onclick = () => adminKey(b, "reset-uid", "Clear UID lock on key #"+b.dataset.r+"?"));
+function fmtT(s) { try { return new Date(s).toLocaleString(); } catch { return s || "—"; } }
+async function stats() {
+  const [ks, ev] = await Promise.all([
+    call("/api/admin/list-keys?limit=200"),
+    call("/api/admin/list-keys?events=1&limit=200")
+  ]);
+  const keys = ks.keys || [], events = ev.events || [];
+  const now = Date.now();
+  $("st_active").textContent = keys.filter(k => k.status === "active").length;
+  $("st_exp").textContent = keys.filter(k => k.status === "active" && (new Date(k.expires_at).getTime() - now) < 7*864e5).length;
+  const day = events.filter(e => now - new Date(e.at).getTime() < 864e5);
+  $("st_anom").textContent = day.filter(e => e.type === "anomaly" || e.type === "seal_mismatch").length;
+  $("st_log").textContent = day.filter(e => e.type === "login_ok").length;
 }
-async function adminKey(btn, ep, msg) {
-  if (!confirm(msg)) return;
-  const id = Number(btn.dataset.v || btn.dataset.r);
+function renderRows() {
+  const q = $("q").value.toLowerCase();
+  const rows = CACHE.filter(k => !q || (k.note||"").toLowerCase().includes(q) || (k.plan||"").includes(q) || String(k.bound_uid||"").includes(q) || String(k.id) === q);
+  $("rows").innerHTML = rows.map(k =>
+    `<tr><td>${k.id}</td><td>${esc(k.plan)}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
+    `<td>${k.bound_uid ?? "—"}</td><td>${k.devices}</td><td>${k.last_seen ? fmtT(k.last_seen) : "—"}</td>` +
+    `<td><span class="pill ${k.status}">${k.status}</span></td><td>${esc((k.note||"").slice(0,28))}</td>` +
+    `<td class="rowbtns"><button data-e="${k.id}">events</button><button data-r="${k.id}">reset</button>` +
+    (k.status === "active" ? ` <button data-v="${k.id}" class="danger revoke">revoke</button>` : "") +
+    ` <button data-d="${k.id}" class="danger del">delete</button></td></tr>`).join("") || `<tr><td colspan="9">no keys</td></tr>`;
+  document.querySelectorAll(".revoke").forEach(b => b.onclick = () => modKey("revoke-key", b.dataset.v, {}, "Revoke key #"+b.dataset.v+"? Sessions die immediately."));
+  document.querySelectorAll(".reset").forEach(b => b.onclick = () => modKey("reset-uid", b.dataset.r, {}, "Clear UID lock on key #"+b.dataset.r+"?"));
+  document.querySelectorAll(".del").forEach(b => b.onclick = () => {
+    if (!confirm("Delete key #"+b.dataset.d+" forever? This cannot be undone.")) return;
+    if (!confirm("Second confirm — really erase it?")) return;
+    modKey("revoke-key", b.dataset.d, { erase: true }, null);
+  });
+  document.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { $("e_key").value = b.dataset.e; showTab("events"); events(); });
+}
+function showTab(t) { document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); ["keys","events","make","off","rel"].forEach(x => $("t-"+x).style.display = x === t ? "block" : "none"); }
+async function modKey(ep, id, extra, msg) {
+  if (msg && !confirm(msg)) return;
   say("kmsg", "Working…");
   try {
-    const j = await call("/api/admin/" + ep, { id });
+    const j = await call("/api/admin/" + ep, Object.assign({ id: Number(id) }, extra));
     say("kmsg", j.ok ? "Done." : ("Failed: " + (j.error || "?")), j.ok ? "ok" : "err");
-    if (j.ok) load();
+    if (j.ok) { load(); stats(); }
   } catch(e) { say("kmsg", e.message, "err"); }
 }
-$("reload").onclick = load;
+async function load() {
+  const st = $("f_status").value;
+  const j = await call("/api/admin/list-keys?status=" + encodeURIComponent(st) + "&limit=200");
+  if (j.error) throw new Error(j.error);
+  CACHE = j.keys || [];
+  renderRows();
+}
+async function events() {
+  say("emsg", "Loading…");
+  try {
+    const p = new URLSearchParams({ events: "1", limit: "100" });
+    if ($("e_key").value) p.set("key_id", $("e_key").value);
+    if ($("e_type").value) p.set("etype", $("e_type").value);
+    const j = await call("/api/admin/list-keys?" + p.toString());
+    if (j.error) throw new Error(j.error);
+    $("erows").innerHTML = (j.events || []).map(e =>
+      `<tr><td>${fmtT(e.at)}</td><td>${e.key_id ?? "—"}</td>` +
+      `<td class="etype-${e.type}">${e.type}</td><td>${esc(e.ip||"")}</td><td>${esc(JSON.stringify(e.meta||{}))}</td></tr>`).join("") || `<tr><td colspan="5">no events</td></tr>`;
+    say("emsg", "");
+  } catch(e) { say("emsg", e.message, "err"); }
+}
+$("q").oninput = renderRows;
+$("reload").onclick = () => { load(); stats(); };
+$("e_go").onclick = events;
 $("m_go").onclick = async () => {
   try {
     const j = await call("/api/admin/create-key", { plan: $("m_plan").value, days: Number($("m_days").value), note: $("m_note").value });
     say("mmsg", j.license_key ? "Created: " + j.license_key + " (copy now — shown once)" : "Failed: " + (j.error||"?"), j.license_key ? "ok" : "err");
-    if (j.license_key) load();
+    if (j.license_key) { load(); stats(); }
   } catch(e) { say("mmsg", e.message, "err"); }
 };
 $("o_go").onclick = async () => {
