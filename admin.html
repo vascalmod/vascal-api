@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — VascalMod</title>
+<style>
+  :root { --bg:#0a0c10; --card:#12151c; --line:#222836; --txt:#eceef4; --mut:#98a0b3; --acc:#2f6bff; --ok:#37c978; --bad:#ff8a80; --danger:#b3261e; }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--txt); font-family: system-ui, sans-serif; margin: 0; }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 14px 0; }
+  input, select, textarea { width: 100%; background: var(--bg); border: 1px solid #333a48; color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; margin: 6px 0; font-family: monospace; }
+  textarea { min-height: 120px; }
+  button { background: var(--acc); color: #fff; border: 0; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; margin: 6px 6px 0 0; }
+  button.danger { background: var(--danger); }
+  button.ghost { background: transparent; border: 1px solid var(--acc); }
+  button:disabled { opacity: .5; }
+  .tabs { display: flex; gap: 8px; margin: 16px 0; }
+  .tabs button.on { background: #1c3263; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #1a1f2a; }
+  th { color: var(--mut); font-weight: 600; }
+  .msg { min-height: 20px; font-size: 13px; color: var(--mut); margin-top: 8px; }
+  .msg.err { color: var(--bad); } .msg.ok { color: var(--ok); }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); }
+  .pill.active { color: var(--ok); border-color: #1e4d36; } .pill.revoked { color: var(--bad); border-color: #5c2320; }
+  .rowbtns button { padding: 4px 10px; font-size: 12px; }
+  small { color: var(--mut); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Admin console</h1>
+  <div class="card" id="lock">
+    <input id="secret" type="password" placeholder="Admin secret" autocomplete="off">
+    <button id="unlock">Unlock</button>
+    <div class="msg" id="lockmsg"></div>
+  </div>
+  <div id="app" style="display:none">
+    <div class="tabs">
+      <button class="on" data-t="keys">Keys</button>
+      <button data-t="make">Create</button>
+      <button data-t="off">Offsets</button>
+      <button data-t="rel">Release</button>
+    </div>
+    <div class="card" id="t-keys">
+      <div><select id="f_status"><option value="">all</option><option value="active">active</option><option value="revoked">revoked</option><option value="suspended">suspended</option></select>
+      <button class="ghost" id="reload">Reload</button></div>
+      <table><thead><tr><th>ID</th><th>Plan</th><th>Expires</th><th>UID</th><th>Dev</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+      <div class="msg" id="kmsg"></div>
+    </div>
+    <div class="card" id="t-make" style="display:none">
+      <input id="m_plan" value="monthly">
+      <input id="m_days" type="number" value="30">
+      <input id="m_note" placeholder="note (buyer, channel…)">
+      <button id="m_go">Create key</button>
+      <div class="msg" id="mmsg"></div>
+    </div>
+    <div class="card" id="t-off" style="display:none">
+      <input id="o_ver" placeholder="game version, e.g. 2.2.16.12322">
+      <input id="o_min" placeholder="min build, e.g. 1.0.4">
+      <textarea id="o_json" placeholder='{"Symbol":"0x…", …}'></textarea>
+      <button id="o_go">Push offsets</button>
+      <div class="msg" id="omsg"></div>
+    </div>
+    <div class="card" id="t-rel" style="display:none">
+      <input id="r_tag" placeholder="tag, e.g. 1.0.5">
+      <input id="r_url" placeholder="public binary URL">
+      <input id="r_hash" placeholder="sha256 hex">
+      <input id="r_notes" placeholder="notes">
+      <input id="r_seals" placeholder='seals JSON, e.g. {"trust":"…"}'>
+      <button id="r_go">Publish release</button>
+      <div class="msg" id="rmsg"></div>
+    </div>
+  </div>
+</main>
+<script>
+let S = sessionStorage.getItem("adm") || "";
+const $ = id => document.getElementById(id);
+const H = () => ({ "Content-Type": "application/json", "x-admin-secret": S });
+function say(id, t, cls) { const m = $(id); m.textContent = t; m.className = "msg " + (cls || ""); }
+async function call(path, body, method) {
+  const r = await fetch(path, { method: method || (body ? "POST" : "GET"), headers: H(), body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 403) throw new Error("wrong secret");
+  return j;
+}
+$("unlock").onclick = async () => {
+  S = $("secret").value; sessionStorage.setItem("adm", S); $("secret").value = "";
+  try { await load(); $("lock").style.display = "none"; $("app").style.display = "block"; }
+  catch { say("lockmsg", "Wrong secret.", "err"); S = ""; sessionStorage.removeItem("adm"); }
+};
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
+  b.classList.add("on");
+  ["keys","make","off","rel"].forEach(t => $("t-"+t).style.display = t === b.dataset.t ? "block" : "none");
+});
+async function load() {
+  const st = $("f_status").value;
+  const j = await call("/api/admin/list-keys?status=" + encodeURIComponent(st) + "&limit=100");
+  if (j.error) throw new Error(j.error);
+  $("rows").innerHTML = j.keys.map(k =>
+    `<tr><td>${k.id}</td><td>${k.plan}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
+    `<td>${k.bound_uid ?? "—"}</td><td>${k.devices}</td>` +
+    `<td><span class="pill ${k.status}">${k.status}</span></td><td>${(k.note||"").slice(0,24)}</td>` +
+    `<td class="rowbtns"><button data-r="${k.id}" class="reset">reset</button> ` +
+    (k.status === "active" ? `<button data-v="${k.id}" class="danger revoke">revoke</button>` : "") + `</td></tr>`).join("");
+  document.querySelectorAll(".revoke").forEach(b => b.onclick = () => adminKey(b, "revoke-id", "Revoke key #"+b.dataset.v+"? Their sessions die immediately."));
+  document.querySelectorAll(".reset").forEach(b => b.onclick = () => adminKey(b, "reset-uid-id", "Clear UID lock on key #"+b.dataset.r+"?"));
+}
+async function adminKey(btn, ep, msg) {
+  if (!confirm(msg)) return;
+  const id = Number(btn.dataset.v || btn.dataset.r);
+  say("kmsg", "Working…");
+  try {
+    const j = await call("/api/admin/" + ep, { id });
+    say("kmsg", j.ok ? "Done." : ("Failed: " + (j.error || "?")), j.ok ? "ok" : "err");
+    if (j.ok) load();
+  } catch(e) { say("kmsg", e.message, "err"); }
+}
+$("reload").onclick = load;
+$("m_go").onclick = async () => {
+  try {
+    const j = await call("/api/admin/create-key", { plan: $("m_plan").value, days: Number($("m_days").value), note: $("m_note").value });
+    say("mmsg", j.license_key ? "Created: " + j.license_key + " (copy now — shown once)" : "Failed: " + (j.error||"?"), j.license_key ? "ok" : "err");
+    if (j.license_key) load();
+  } catch(e) { say("mmsg", e.message, "err"); }
+};
+$("o_go").onclick = async () => {
+  let table;
+  try { table = JSON.parse($("o_json").value); } catch { return say("omsg", "Bad JSON.", "err"); }
+  try {
+    const j = await call("/api/admin/push-offsets", { game_version: $("o_ver").value, table_json: table, min_build: $("o_min").value });
+    say("omsg", j.ok ? "Pushed." : "Failed: " + (j.error||"?"), j.ok ? "ok" : "err");
+  } catch(e) { say("omsg", e.message, "err"); }
+};
+$("r_go").onclick = async () => {
+  let seals = {};
+  try { seals = $("r_seals").value ? JSON.parse($("r_seals").value) : {}; } catch { return say("rmsg", "Bad seals JSON.", "err"); }
+  try {
+    const j = await call("/api/admin/push-release", { tag: $("r_tag").value, url: $("r_url").value, sha256: $("r_hash").value, notes: $("r_notes").value, seals });
+    say("rmsg", j.ok ? "Published." : "Failed: " + (j.error||"?"), j.ok ? "ok" : "err");
+  } catch(e) { say("rmsg", e.message, "err"); }
+};
+if (S) $("unlock").onclick();
+</script>
+</body>
+</html>
