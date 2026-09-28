@@ -1,4 +1,6 @@
 import { db } from "../../lib/db.js";
+import { openKey } from "../../lib/keywrap.js";
+import { logEvent } from "../../lib/validate.js";
 
 // GET /api/admin/list-keys?status=&limit=&offset= (header x-admin-secret)
 // Rows carry hashes only (plaintext is never stored). Includes device count + last event.
@@ -10,6 +12,17 @@ export async function GET(req: Request): Promise<Response> {
     }
     const url = new URL(req.url);
     const status = url.searchParams.get("status") || "";
+    // Reveal mode: ?reveal=<id> returns the plaintext once, audit-logged. Same slot.
+    if (url.searchParams.get("reveal")) {
+        const id = Number(url.searchParams.get("reveal"));
+        if (!id) return Response.json({ error: "bad_request" }, { status: 400 });
+        const rk = await db().query(`SELECT key_enc FROM keys WHERE id = $1 LIMIT 1`, [id]);
+        if (!rk.rows.length || !rk.rows[0].key_enc) return Response.json({ error: "not_found" }, { status: 404 });
+        const pt = openKey(rk.rows[0].key_enc);
+        if (!pt) return Response.json({ error: "not_found" }, { status: 404 });
+        await logEvent(id, "key_revealed", req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "", {});
+        return Response.json({ license_key: pt });
+    }
     if (url.searchParams.get("events") === "1") {
         const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") || 50)));
         const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));

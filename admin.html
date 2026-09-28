@@ -156,7 +156,7 @@ function renderRows() {
     return `<tr><td>${k.id}</td><td style="font-family:monospace">${fp}</td><td>${esc(k.plan)}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
     `<td>${k.bound_uid ?? "—"}</td><td>${k.devices}</td><td>${k.last_seen ? fmtT(k.last_seen) : "—"}</td>` +
     `<td><span class="pill ${k.status}">${k.status}</span></td><td>${esc((k.note||"").slice(0,28))}</td>` +
-    `<td class="rowbtns"><button data-e="${k.id}">events</button><button data-r="${k.id}">reset</button>` +
+    `<td class="rowbtns"><button data-e="${k.id}">events</button><button data-s="${k.id}">show</button><button data-r="${k.id}">reset</button>` +
     (k.status === "active" ? ` <button data-v="${k.id}" class="danger revoke">revoke</button>` : "") +
     ` <button data-d="${k.id}" class="danger del">delete</button></td></tr>`;
   }).join("") || `<tr><td colspan="10">no keys</td></tr>`;
@@ -168,6 +168,19 @@ function renderRows() {
     modKey("revoke-key", b.dataset.d, { erase: true }, null);
   });
   document.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { $("e_key").value = b.dataset.e; showTab("events"); events(); });
+  document.querySelectorAll("[data-s]").forEach(b => b.onclick = async () => {
+    if (!confirm("Reveal full key #" + b.dataset.s + "? Logged in the audit trail.")) return;
+    say("kmsg", "Revealing…");
+    try {
+      const j = await call("/api/admin/list-keys?reveal=" + b.dataset.s);
+      if (j.license_key) {
+        say("kmsg", "", "ok");
+        $("kmsg").innerHTML = `Key: <b style="font-family:monospace">${j.license_key}</b> ` +
+          `<button id="copykey" style="padding:4px 12px;font-size:12px">copy</button>`;
+        $("copykey").onclick = () => { navigator.clipboard.writeText(j.license_key); say("kmsg", "Copied.", "ok"); };
+      } else say("kmsg", "Failed: " + (j.error || "not stored for this key"), "err");
+    } catch(e) { say("kmsg", e.message, "err"); }
+  });
 }
 function showTab(t) { document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x.dataset.t === t)); ["keys","events","make","off","rel"].forEach(x => $("t-"+x).style.display = x === t ? "block" : "none"); }
 async function modKey(ep, id, extra, msg) {

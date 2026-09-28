@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { db, q } from "../../lib/db.js";
+import { sealKey } from "../../lib/keywrap.js";
 
 // All admin ops: header `x-admin-secret: $ADMIN_SECRET`.
 
@@ -24,8 +25,8 @@ export async function POST(req: Request): Promise<Response> {
     const hash = createHash("sha256").update(key, "utf8").digest("hex");
     const exp = new Date(Date.now() + days * 864e5).toISOString();
     await db().query(
-        `INSERT INTO keys (license_key_hash, key_prefix, key_suffix, plan, expires_at, note) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [hash, key.slice(0, 8), key.slice(-4), String(b?.plan ?? "monthly"), exp, String(b?.note ?? "")]
+        `INSERT INTO keys (license_key_hash, key_prefix, key_suffix, key_enc, plan, expires_at, note) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [hash, key.slice(0, 8), key.slice(-4), sealKey(key), String(b?.plan ?? "monthly"), exp, String(b?.note ?? "")]
     );
     return Response.json({ license_key: key, expires_at: exp });
 }
