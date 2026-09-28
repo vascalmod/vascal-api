@@ -62,5 +62,6 @@ CREATE TABLE IF NOT EXISTS releases (
     url         TEXT NOT NULL,
     sha256      CHAR(64) NOT NULL,                -- hex of the exact binary
     notes       TEXT NOT NULL DEFAULT '',
+    seals       JSONB NOT NULL DEFAULT '{}',      -- e.g. {"trust":"<hex sha256 of trust anchors>"}
     at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );

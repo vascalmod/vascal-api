@@ -54,11 +54,23 @@ export async function POST(req: Request): Promise<Response> {
     );
     await logEvent(v.key_id, "login_ok", ip, { uid: game_uid, build_tag });
 
+    // Trust seals for the caller's exact build tag (absent = client skips the check).
+    let seals = {};
+    try {
+        const sr = await q(`SELECT seals FROM releases WHERE tag = $1 ORDER BY at DESC LIMIT 1`, [
+            String(build_tag ?? ""),
+        ]);
+        if (sr.rows.length && sr.rows[0].seals) seals = sr.rows[0].seals;
+    } catch {
+        seals = {};
+    }
+
     return Response.json({
         token,
         offsets: rows[0].table_json,
         plan: v.plan,
         expires_at: v.expires_at,
         expires_in: TOKEN_TTL_SEC,
+        seals,
     });
 }
