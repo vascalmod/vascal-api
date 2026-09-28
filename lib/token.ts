@@ -19,13 +19,13 @@ function unb64u(s: string): Buffer {
     return Buffer.from(s, "base64");
 }
 
-export function mintToken(args: { jti: string; uid: number; key_id: string; build: string; over: string; exp: number }): string {
+export function mintToken(args: { jti: string; uid: number; key_id: number; build: string; over: string; exp: number }): string {
     const payload = Buffer.from(JSON.stringify(args), "utf8");
     const sig = sign(null, payload, createPrivateKey(PRIV_PEM));
     return `v1.${b64u(payload)}.${b64u(sig)}`;
 }
 
-export function verifyToken(token: string): { jti: string; uid: number; key_id: string; build: string; over: string; exp: number } | null {
+export function verifyToken(token: string): { jti: string; uid: number; key_id: number; build: string; over: string; exp: number } | null {
     try {
         const [ver, p, s] = token.split(".");
         if (ver !== "v1" || !p || !s) return null;

@@ -1,16 +1,16 @@
 import { db, sha256Hex, q } from "./db.js";
 
 // Shared verdict used by login + heartbeat. Fail-closed: any null = reject.
-// key_id is the keys.kuuid string end to end (token claims carry it opaquely).
+// key_id is the keys.id integer end to end (8-digit random, non-sequential).
 
 export type Verdict =
-    | { ok: true; key_id: string; plan: string; expires_at: string; bound_uid: number | null }
+    | { ok: true; key_id: number; plan: string; expires_at: string; bound_uid: number | null }
     | { ok: false; code: string };
 
 export async function checkKey(license_key: string, uid: number): Promise<Verdict> {
     const hash = await sha256Hex(license_key.trim());
     const { rows } = await q(
-        `SELECT kuuid, plan, expires_at, bound_uid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
+        `SELECT id, plan, expires_at, bound_uid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
         [hash]
     );
     if (!rows.length) return { ok: false, code: "bad_key" };
@@ -19,9 +19,9 @@ export async function checkKey(license_key: string, uid: number): Promise<Verdic
     if (new Date(k.expires_at).getTime() < Date.now()) return { ok: false, code: "expired" };
 
     // UID lock: first login binds, later logins must match (reset via admin).
-    const keyId: string = k.kuuid;
+    const keyId = Number(k.id);
     if (k.bound_uid === null) {
-        await q(`UPDATE keys SET bound_uid = $1 WHERE kuuid = $2`, [uid, keyId]);
+        await q(`UPDATE keys SET bound_uid = $1 WHERE id = $2`, [uid, keyId]);
         await q(
             `INSERT INTO devices (key_id, uid) VALUES ($1, $2)
              ON CONFLICT (key_id, uid) DO UPDATE SET last_seen = now()`,
@@ -44,7 +44,7 @@ export async function checkKey(license_key: string, uid: number): Promise<Verdic
     return { ok: true, key_id: keyId, plan: k.plan, expires_at: k.expires_at, bound_uid: Number(k.bound_uid) };
 }
 
-export async function logEvent(key_id: string | null, type: string, ip: string, meta: object = {}): Promise<void> {
+export async function logEvent(key_id: number | null, type: string, ip: string, meta: object = {}): Promise<void> {
     await q(`INSERT INTO events (key_id, type, ip, meta) VALUES ($1, $2, $3, $4)`, [
         key_id,
         type,

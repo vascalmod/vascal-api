@@ -14,9 +14,9 @@ export async function GET(req: Request): Promise<Response> {
     const status = url.searchParams.get("status") || "";
     // Reveal mode: ?reveal=<id> returns the plaintext once, audit-logged. Same slot.
     if (url.searchParams.get("reveal")) {
-        const id = url.searchParams.get("reveal") || "";
+        const id = Number(url.searchParams.get("reveal") || 0);
         if (!id) return Response.json({ error: "bad_request" }, { status: 400 });
-        const rk = await db().query(`SELECT key_enc FROM keys WHERE kuuid = $1 LIMIT 1`, [id]);
+        const rk = await db().query(`SELECT key_enc FROM keys WHERE id = $1 LIMIT 1`, [id]);
         if (!rk.rows.length || !rk.rows[0].key_enc) return Response.json({ error: "not_found" }, { status: 404 });
         const pt = openKey(rk.rows[0].key_enc);
         if (!pt) return Response.json({ error: "not_found" }, { status: 404 });
@@ -27,7 +27,7 @@ export async function GET(req: Request): Promise<Response> {
         const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") || 50)));
         const offset = Math.max(0, Number(url.searchParams.get("offset") || 0));
         const etype = url.searchParams.get("etype") || "";
-        const keyId = url.searchParams.get("key_id") || "";
+        const keyId = Number(url.searchParams.get("key_id") || 0);
         const conds: string[] = [];
         const params: any[] = [];
         if (keyId) {
@@ -53,10 +53,10 @@ export async function GET(req: Request): Promise<Response> {
     const params: any[] = [limit, offset];
     if (where) params.push(status);
     const { rows } = await db().query(
-        `SELECT k.kuuid, k.plan, k.expires_at, k.bound_uid, k.status, k.note, k.created_at,
+        `SELECT k.id, k.plan, k.expires_at, k.bound_uid, k.status, k.note, k.created_at,
                 k.key_prefix, k.key_suffix,
-                (SELECT count(*)::int FROM devices d WHERE d.key_id = k.kuuid) AS devices,
-                (SELECT max(at) FROM events e WHERE e.key_id = k.kuuid) AS last_seen
+                (SELECT count(*)::int FROM devices d WHERE d.key_id = k.id) AS devices,
+                (SELECT max(at) FROM events e WHERE e.key_id = k.id) AS last_seen
          FROM keys k ${where} ORDER BY k.created_at DESC LIMIT $1 OFFSET $2`,
         params
     );
