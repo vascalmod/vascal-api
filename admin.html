@@ -123,9 +123,11 @@ async function call(path, body, method) {
   return j;
 }
 $("unlock").onclick = async () => {
-  S = $("secret").value; sessionStorage.setItem("adm", S); $("secret").value = "";
+  S = $("secret").value.trim().replace(/^["']|["']$/g, "");
+  sessionStorage.setItem("adm", S); $("secret").value = "";
+  say("lockmsg", "Checking…");
   try { await load(); await stats(); await events(); $("lock").style.display = "none"; $("app").style.display = "block"; }
-  catch { say("lockmsg", "Wrong secret.", "err"); S = ""; sessionStorage.removeItem("adm"); }
+  catch(e) { say("lockmsg", /wrong secret/i.test(e.message) ? "Wrong secret." : ("Backend error: " + e.message + " — check deploy status."), "err"); S = ""; sessionStorage.removeItem("adm"); }
 };
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("on"));
