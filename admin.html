@@ -158,7 +158,8 @@ function renderRows() {
     `<td><span class="pill ${k.status}">${k.status}</span></td><td>${esc((k.note||"").slice(0,28))}</td>` +
     `<td class="rowbtns"><button data-e="${k.id}">events</button><button data-r="${k.id}">reset</button>` +
     (k.status === "active" ? ` <button data-v="${k.id}" class="danger revoke">revoke</button>` : "") +
-    ` <button data-d="${k.id}" class="danger del">delete</button></td></tr>`).join("") || `<tr><td colspan="10">no keys</td></tr>`;
+    ` <button data-d="${k.id}" class="danger del">delete</button></td></tr>`;
+  }).join("") || `<tr><td colspan="10">no keys</td></tr>`;
   document.querySelectorAll(".revoke").forEach(b => b.onclick = () => modKey("revoke-key", b.dataset.v, {}, "Revoke key #"+b.dataset.v+"? Sessions die immediately."));
   document.querySelectorAll(".reset").forEach(b => b.onclick = () => modKey("reset-uid", b.dataset.r, {}, "Clear UID lock on key #"+b.dataset.r+"?"));
   document.querySelectorAll(".del").forEach(b => b.onclick = () => {
