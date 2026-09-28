@@ -107,8 +107,8 @@ async function load() {
     `<td><span class="pill ${k.status}">${k.status}</span></td><td>${(k.note||"").slice(0,24)}</td>` +
     `<td class="rowbtns"><button data-r="${k.id}" class="reset">reset</button> ` +
     (k.status === "active" ? `<button data-v="${k.id}" class="danger revoke">revoke</button>` : "") + `</td></tr>`).join("");
-  document.querySelectorAll(".revoke").forEach(b => b.onclick = () => adminKey(b, "revoke-id", "Revoke key #"+b.dataset.v+"? Their sessions die immediately."));
-  document.querySelectorAll(".reset").forEach(b => b.onclick = () => adminKey(b, "reset-uid-id", "Clear UID lock on key #"+b.dataset.r+"?"));
+  document.querySelectorAll(".revoke").forEach(b => b.onclick = () => adminKey(b, "revoke-key", "Revoke key #"+b.dataset.v+"? Their sessions die immediately."));
+  document.querySelectorAll(".reset").forEach(b => b.onclick = () => adminKey(b, "reset-uid", "Clear UID lock on key #"+b.dataset.r+"?"));
 }
 async function adminKey(btn, ep, msg) {
   if (!confirm(msg)) return;
