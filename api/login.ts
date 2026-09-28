@@ -4,6 +4,17 @@ import { consumeNonce } from "../lib/nonce.js";
 import { checkKey, logEvent, clientIp } from "../lib/validate.js";
 import { throttle } from "../lib/rate-limit.js";
 
+// Numeric dotted compare: 1.0.10 > 1.0.9 (plain string compare gets this wrong).
+function cmpVer(a: string, b: string): number {
+    const pa = a.split(".").map((x) => parseInt(x, 10) || 0);
+    const pb = b.split(".").map((x) => parseInt(x, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+        if (d !== 0) return d;
+    }
+    return 0;
+}
+
 // POST /api/login { license_key, game_uid, build_tag, game_version, nonce }
 // -> 200 { token, offsets, expires_in } | 4xx { error }
 
@@ -40,7 +51,7 @@ export async function POST(req: Request): Promise<Response> {
         await logEvent(v.key_id, "login_unsupported", ip, { game_version });
         return Response.json({ error: "unsupported_version" }, { status: 409 });
     }
-    if (rows[0].min_build && String(build_tag ?? "") < String(rows[0].min_build)) {
+    if (rows[0].min_build && cmpVer(String(build_tag ?? ""), String(rows[0].min_build)) < 0) {
         await logEvent(v.key_id, "login_stale_build", ip, { build_tag });
         return Response.json({ error: "update_required" }, { status: 409 });
     }
