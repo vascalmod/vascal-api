@@ -41,6 +41,7 @@ export async function GET(req: Request): Promise<Response> {
     if (where) params.push(status);
     const { rows } = await db().query(
         `SELECT k.id, k.plan, k.expires_at, k.bound_uid, k.status, k.note, k.created_at,
+                k.key_prefix, k.key_suffix,
                 (SELECT count(*)::int FROM devices d WHERE d.key_id = k.id) AS devices,
                 (SELECT max(at) FROM events e WHERE e.key_id = k.id) AS last_seen
          FROM keys k ${where} ORDER BY k.created_at DESC LIMIT $1 OFFSET $2`,

@@ -5,6 +5,8 @@
 CREATE TABLE IF NOT EXISTS keys (
     id              BIGSERIAL PRIMARY KEY,
     license_key_hash CHAR(64) NOT NULL UNIQUE,
+    key_prefix      CHAR(8) NOT NULL DEFAULT '',   -- first 8 chars, identification only
+    key_suffix      CHAR(4) NOT NULL DEFAULT '',   -- last 4 chars, identification only
     plan            TEXT NOT NULL DEFAULT 'monthly',
     expires_at      TIMESTAMPTZ NOT NULL,
     bound_uid       BIGINT,                       -- game UID this key is locked to (NULL = unbound)

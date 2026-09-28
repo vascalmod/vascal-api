@@ -23,11 +23,9 @@ export async function POST(req: Request): Promise<Response> {
     const key = newKey();
     const hash = createHash("sha256").update(key, "utf8").digest("hex");
     const exp = new Date(Date.now() + days * 864e5).toISOString();
-    await q(`INSERT INTO keys (license_key_hash, plan, expires_at, note) VALUES ($1, $2, $3, $4)`, [
-        hash,
-        String(b?.plan ?? "monthly"),
-        exp,
-        String(b?.note ?? ""),
-    ]);
+    await db().query(
+        `INSERT INTO keys (license_key_hash, key_prefix, key_suffix, plan, expires_at, note) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [hash, key.slice(0, 8), key.slice(-4), String(b?.plan ?? "monthly"), exp, String(b?.note ?? "")]
+    );
     return Response.json({ license_key: key, expires_at: exp });
 }
