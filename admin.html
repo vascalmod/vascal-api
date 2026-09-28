@@ -72,7 +72,7 @@
         <select id="f_status"><option value="">all</option><option value="active">active</option><option value="revoked">revoked</option><option value="suspended">suspended</option></select>
         <button class="ghost" id="reload">Reload</button>
       </div>
-      <div class="tblwrap"><table><thead><tr><th>ID</th><th>Key</th><th>Plan</th><th>Expires</th><th>UID</th><th>Dev</th><th>Seen</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+      <div class="tblwrap"><table><thead><tr><th>Key ID</th><th>Key</th><th>Plan</th><th>Expires</th><th>UID</th><th>Dev</th><th>Seen</th><th>Status</th><th>Note</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
       <div class="msg" id="kmsg"></div>
     </div>
     <div class="card" id="t-events" style="display:none">
@@ -150,10 +150,11 @@ async function stats() {
 }
 function renderRows() {
   const q = $("q").value.toLowerCase();
-  const rows = CACHE.filter(k => !q || (k.note||"").toLowerCase().includes(q) || (k.plan||"").includes(q) || String(k.bound_uid||"").includes(q) || String(k.id) === q || (k.key_prefix||"").toLowerCase().includes(q) || (k.key_suffix||"").toLowerCase().includes(q));
+  const rows = CACHE.filter(k => !q || (k.note||"").toLowerCase().includes(q) || (k.plan||"").includes(q) || String(k.bound_uid||"").includes(q) || String(k.id) === q || String(k.kuuid||"").toLowerCase().includes(q) || (k.key_prefix||"").toLowerCase().includes(q) || (k.key_suffix||"").toLowerCase().includes(q));
   $("rows").innerHTML = rows.map(k => {
     const fp = k.key_prefix ? (k.key_prefix + "…" + (k.key_suffix || "")) : "—";
-    return `<tr><td>${k.id}</td><td style="font-family:monospace">${fp}</td><td>${esc(k.plan)}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
+    const ku = k.kuuid ? String(k.kuuid).slice(0, 8) : ("#" + k.id);
+    return `<tr><td style="font-family:monospace">${ku}</td><td style="font-family:monospace">${fp}</td><td>${esc(k.plan)}</td><td>${new Date(k.expires_at).toLocaleDateString()}</td>` +
     `<td>${k.bound_uid ?? "—"}</td><td>${k.devices}</td><td>${k.last_seen ? fmtT(k.last_seen) : "—"}</td>` +
     `<td><span class="pill ${k.status}">${k.status}</span></td><td>${esc((k.note||"").slice(0,28))}</td>` +
     `<td class="rowbtns"><button data-e="${k.id}">events</button><button data-s="${k.id}">show</button><button data-r="${k.id}">reset</button>` +

@@ -3,7 +3,8 @@
 
 -- License keys. Only SHA-256 hashes stored, never plaintext.
 CREATE TABLE IF NOT EXISTS keys (
-    id              BIGSERIAL PRIMARY KEY,
+    id              BIGSERIAL PRIMARY KEY,            -- internal, never exposed
+    kuuid           UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE, -- public face
     license_key_hash CHAR(64) NOT NULL UNIQUE,
     key_prefix      CHAR(8) NOT NULL DEFAULT '',   -- first 8 chars, identification only
     key_suffix      CHAR(4) NOT NULL DEFAULT '',   -- last 4 chars, identification only
