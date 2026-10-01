@@ -1,88 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Manage license — VascalMod</title>
-<style>
-  :root { --bg: #0a0c10; --card: #12151c; --line: #222836; --txt: #eceef4; --mut: #98a0b3; --acc: #2f6bff; --ok: #37c978; --bad: #ff8a80; --danger: #b3261e; }
-  * { box-sizing: border-box; }
-  body { background: radial-gradient(1000px 400px at 50% -10%, #16203a 0%, var(--bg) 60%); color: var(--txt); font-family: system-ui, -apple-system, sans-serif; margin: 0; min-height: 100vh; }
-  main { max-width: 520px; margin: 0 auto; padding: 48px 20px 64px; }
-  h1 { font-size: clamp(22px, 5vw, 28px); text-align: center; }
-  p.lead { color: var(--mut); text-align: center; font-size: 15px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; margin: 16px 0; }
-  input { width: 100%; background: var(--bg); border: 1px solid #333a48; color: #fff; padding: 14px; border-radius: 10px; font-size: 16px; font-family: monospace; }
-  input:focus { outline: none; border-color: var(--acc); }
-  button { width: 100%; background: var(--acc); color: #fff; border: 0; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 16px; cursor: pointer; margin-top: 12px; }
-  button.danger { background: var(--danger); }
-  button:disabled { opacity: 0.5; cursor: default; }
-  .row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #1a1f2a; color: var(--mut); font-size: 15px; }
-  .row:last-child { border-bottom: 0; }
-  .row b { color: var(--txt); }
-  .msg { margin-top: 12px; min-height: 22px; font-size: 14px; color: var(--mut); text-align: center; }
-  .msg.err { color: var(--bad); }
-  .msg.ok { color: var(--ok); }
-  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid #333a48; border-top-color: var(--acc); border-radius: 50%; animation: sp 0.7s linear infinite; vertical-align: -2px; }
-  @keyframes sp { to { transform: rotate(360deg); } }
-  .back { display: block; text-align: center; margin-top: 8px; color: #7da2ff; text-decoration: none; font-size: 14px; }
-</style>
-</head>
-<body>
-<main>
-  <h1>Manage license</h1>
-  <p class="lead">Check plan, expiry, and move your key between accounts.</p>
-  <div class="card">
-    <input id="key" type="text" placeholder="VSC-XXXXXXXXXXXXXXXX" autocomplete="off" spellcheck="false">
-    <button id="check">Check status</button>
-    <div class="msg" id="msg"></div>
-  </div>
-  <div class="card" id="status" style="display:none">
-    <div class="row"><span>Plan</span><b id="s_plan"></b></div>
-    <div class="row"><span>Expires</span><b id="s_exp"></b></div>
-    <div class="row"><span>Seats</span><b id="s_seats"></b></div>
-    <div id="seat_rows"></div>
-    <div class="row"><span>Account resets</span><b>unlimited</b></div>
-    <button class="danger" id="reset">Unbind account</button>
-  </div>
-  <a class="back" href="/">← back</a>
-</main>
-<script>
-const $ = id => document.getElementById(id);
-const key = () => $("key").value.trim();
-function say(html, cls) { const m = $("msg"); m.innerHTML = html; m.className = "msg " + (cls || ""); }
-function busy(b) { $("check").disabled = b; $("reset").disabled = b; }
-$("check").onclick = async () => {
-  if (!key()) return say("Enter your license key.", "err");
-  busy(true); say('<span class="spin"></span> Checking…');
-  try {
-    const r = await fetch("/api/self/status", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ license_key: key() }) });
-    const j = await r.json();
-    if (!r.ok) {
-      $("status").style.display = "none";
-      return say({ bad_key: "Key not found.", revoked: "Key revoked. Contact the seller.", rate_limited: "Too many tries. Wait a minute." }[j.error] || "Lookup failed.", "err");
-    }
-    $("s_plan").textContent = j.plan;
-    $("s_exp").textContent = new Date(j.expires_at).toLocaleDateString();
-    $("s_seats").textContent = (j.seats ? j.seats.length : 0) + " / " + (j.max_devices ?? 1) + " devices × " + (j.duration_days ?? 3) + "d each";
-    $("seat_rows").innerHTML = (j.seats || []).map(x => `<div class="row"><span>📱 ${x.hwid}</span><b>${x.uid ?? "free"} → ${new Date(x.expires_at).toLocaleDateString()}</b></div>`).join("");
-    $("status").style.display = "block";
-    say("");
-  } catch { say("Network error.", "err"); }
-  busy(false);
-};
-$("reset").onclick = async () => {
-  if (!confirm("Unbind the current game account? The next login binds the new one.")) return;
-  busy(true); say('<span class="spin"></span> Working…');
-  try {
-    const r = await fetch("/api/self/reset-uid", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ license_key: key() }) });
-    const j = await r.json();
-    if (!r.ok) return say({ bad_key: "Key not found.", revoked: "Key revoked.", hwid_locked: "Key is bound to another device." }[j.error] || "Reset failed.", "err");
-    say("Unbound. Log in from the new account.", "ok");
-    $("check").onclick();
-  } catch { say("Network error.", "err"); }
-  busy(false);
-};
-</script>
-</body>
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Account — VascalMod</title>
+    <script type="module" crossorigin src="./assets/account-CZ0ZBg-H.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/jsx-runtime-CdPFwWMR.js">
+    <link rel="stylesheet" crossorigin href="./assets/jsx-runtime-DTGm_Hrl.css">
+  </head>
+  <body style="background:#080a0e">
+    <div id="root"></div>
+  </body>
 </html>

@@ -1,65 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VascalMod — MLBB Kernel Overlay</title>
-<style>
-  :root { --bg: #0a0c10; --card: #12151c; --line: #222836; --txt: #eceef4; --mut: #98a0b3; --acc: #2f6bff; --ok: #37c978; }
-  * { box-sizing: border-box; }
-  body { background: radial-gradient(1200px 500px at 50% -10%, #16203a 0%, var(--bg) 60%); color: var(--txt); font-family: system-ui, -apple-system, sans-serif; margin: 0; min-height: 100vh; }
-  main { max-width: 720px; margin: 0 auto; padding: 56px 20px 64px; }
-  .hero { text-align: center; padding: 24px 0 8px; }
-  .hero h1 { font-size: clamp(30px, 6vw, 44px); margin: 0; letter-spacing: -0.5px; }
-  .hero h1 span { color: var(--acc); }
-  .hero p { color: var(--mut); font-size: clamp(15px, 3.5vw, 18px); }
-  .pill { display: inline-block; font-size: 13px; color: var(--ok); border: 1px solid #1e4d36; background: #0f2018; padding: 6px 14px; border-radius: 999px; margin-bottom: 14px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; margin: 18px 0; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } main { padding: 36px 16px 48px; } }
-  .feat { background: #0e1118; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-  .feat b { display: block; margin-bottom: 4px; }
-  .feat small { color: var(--mut); }
-  .btn { display: inline-block; background: var(--acc); color: #fff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 16px; }
-  .btn.ghost { background: transparent; border: 1px solid var(--acc); }
-  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
-  .dlver { font-size: 15px; color: var(--mut); }
-  footer { text-align: center; color: #5b6373; font-size: 13px; margin-top: 32px; }
-  footer a { color: #7da2ff; }
-</style>
-</head>
-<body>
-<main>
-  <div class="hero">
-    <div class="pill" id="ver">checking release…</div>
-    <h1>Vascal<span>Mod</span></h1>
-  </div>
-  <div class="card" style="text-align:center">
-    <div class="row" style="justify-content:center">
-      <a class="btn" id="dlbtn" href="#" style="display:none">Download</a>
-      <a class="btn ghost" href="/account">Manage license</a>
-    </div>
-    <p class="dlver" id="dlsub"></p>
-  </div>
-  <div class="grid">
-    <div class="feat"><b>ESP Overlays</b><small>Boxes, health, names, cooldowns, line tracking.</small></div>
-    <div class="feat"><b>Retribution Assist</b><small>Overlay button with lord, turtle, and camp triggers.</small></div>
-    <div class="feat"><b>Minimap Intel</b><small>Monster dots, respawn countdowns, creep alerts.</small></div>
-    <div class="feat"><b>Room Insights</b><small>Ranks, roles, heroes, and spells before the match.</small></div>
-    <div class="feat"><b>Auto updates</b><small>Verified downloads on every launch. Nothing to chase.</small></div>
-    <div class="feat"><b>Two modes</b><small>Kernel driver or driverless — your call at boot.</small></div>
-  </div>
-  <footer>Support via your seller · Keep your license key private</footer>
-</main>
-<script>
-fetch("/api/version").then(r => r.json()).then(v => {
-  const pill = document.getElementById("ver"), btn = document.getElementById("dlbtn"), sub = document.getElementById("dlsub");
-  if (v && v.latest) {
-    pill.textContent = "v" + v.latest + " live";
-    if (v.url) { btn.href = v.url; btn.style.display = "inline-block"; }
-    sub.textContent = v.notes || "";
-  } else pill.textContent = "release info unavailable";
-}).catch(() => { document.getElementById("ver").textContent = "release info unavailable"; });
-</script>
-</body>
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VascalMod — MLBB Kernel Overlay</title>
+    <script type="module" crossorigin src="./assets/main-zhjlvCNL.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/jsx-runtime-CdPFwWMR.js">
+    <link rel="stylesheet" crossorigin href="./assets/jsx-runtime-DTGm_Hrl.css">
+  </head>
+  <body style="background:#080a0e">
+    <div id="root"></div>
+  </body>
 </html>
