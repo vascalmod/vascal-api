@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS keys (
     plan            TEXT NOT NULL DEFAULT 'monthly',
     expires_at      TIMESTAMPTZ NOT NULL,
     bound_uid       BIGINT,
+    bound_hwid      TEXT,
     status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked','suspended')),
     note            TEXT NOT NULL DEFAULT '',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()

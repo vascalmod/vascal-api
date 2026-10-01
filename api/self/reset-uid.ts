@@ -4,7 +4,8 @@ import { throttle } from "../../lib/rate-limit.js";
 
 // POST /api/self/reset-uid { license_key }
 // Clears the UID binding; next login binds the new account.
-// Rolling limit: 2 per 24h. Every reset audit-logged, UID history retained.
+// Unlimited resets (device lock still prevents key sharing).
+// Every reset audit-logged, UID history retained.
 
 export async function POST(req: Request): Promise<Response> {
     const ip = clientIp(req);
@@ -21,14 +22,6 @@ export async function POST(req: Request): Promise<Response> {
     if (!rows.length) return Response.json({ error: "bad_key" }, { status: 401 });
     const k = rows[0];
     if (k.status !== "active") return Response.json({ error: "revoked" }, { status: 401 });
-    const rc = await db().query(
-        `SELECT count(*)::int AS n FROM events WHERE key_id = $1 AND type = 'uid_reset_self' AND at > now() - interval '24 hours'`,
-        [k.id]
-    );
-    if ((rc.rows[0]?.n ?? 0) >= 2) {
-        await logEvent(k.id, "reset_denied", ip, {});
-        return Response.json({ error: "limit_reached" }, { status: 429 });
-    }
     await db().query(`UPDATE keys SET bound_uid = NULL WHERE id = $1`, [k.id]);
     await db().query(`UPDATE sessions SET revoked = TRUE WHERE key_id = $1`, [k.id]);
     await logEvent(k.id, "uid_reset_self", ip, {});

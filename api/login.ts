@@ -29,6 +29,7 @@ export async function POST(req: Request): Promise<Response> {
         return Response.json({ error: "bad_json" }, { status: 400 });
     }
     const { license_key, game_uid, build_tag, game_version, nonce } = b ?? {};
+    const hwid = typeof b?.hwid === "string" ? b.hwid : "";
     if (typeof license_key !== "string" || typeof game_uid !== "number" || !game_uid) {
         return Response.json({ error: "bad_request" }, { status: 400 });
     }
@@ -36,7 +37,7 @@ export async function POST(req: Request): Promise<Response> {
         return Response.json({ error: "bad_nonce" }, { status: 401 });
     }
 
-    const v = await checkKey(license_key, game_uid);
+    const v = await checkKey(license_key, game_uid, hwid);
     if (v.ok === false) {
         const code: string = v.code;
         await logEvent(null, "login_fail", ip, { code, uid: game_uid });

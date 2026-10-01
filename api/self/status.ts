@@ -40,6 +40,6 @@ export async function POST(req: Request): Promise<Response> {
         plan: k.plan,
         expires_at: k.expires_at,
         bound_uid_masked: maskUid(k.bound_uid === null ? null : Number(k.bound_uid)),
-        resets_left_today: Math.max(0, 2 - used),
+        resets_left_today: -1, // unlimited resets
     });
 }

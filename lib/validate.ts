@@ -7,10 +7,10 @@ export type Verdict =
     | { ok: true; key_id: number; plan: string; expires_at: string; bound_uid: number | null }
     | { ok: false; code: string };
 
-export async function checkKey(license_key: string, uid: number): Promise<Verdict> {
+export async function checkKey(license_key: string, uid: number, hwid: string = ""): Promise<Verdict> {
     const hash = await sha256Hex(license_key.trim());
     const { rows } = await q(
-        `SELECT id, plan, expires_at, bound_uid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
+        `SELECT id, plan, expires_at, bound_uid, bound_hwid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
         [hash]
     );
     if (!rows.length) return { ok: false, code: "bad_key" };
@@ -35,6 +35,20 @@ export async function checkKey(license_key: string, uid: number): Promise<Verdic
             [keyId, JSON.stringify({ reason: "uid_mismatch", seen_uid: uid, bound_uid: Number(k.bound_uid) })]
         );
         return { ok: false, code: "uid_locked" };
+    }
+    // Device lock: first login binds, later logins must match (admin reset moves it).
+    // Empty hwid = legacy client: uid lock still applies, device check skipped.
+    const hw = String(hwid ?? "").trim();
+    if (hw) {
+        if (!k.bound_hwid) {
+            await q(`UPDATE keys SET bound_hwid = $1 WHERE id = $2`, [hw, keyId]);
+        } else if (k.bound_hwid !== hw) {
+            await q(
+                `INSERT INTO events (key_id, type, meta) VALUES ($1, 'anomaly', $2)`,
+                [keyId, JSON.stringify({ reason: "hwid_mismatch", seen_hwid: hw, bound_hwid: k.bound_hwid })]
+            );
+            return { ok: false, code: "hwid_locked" };
+        }
     }
     await q(
         `INSERT INTO devices (key_id, uid) VALUES ($1, $2)

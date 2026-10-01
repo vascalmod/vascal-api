@@ -41,7 +41,8 @@
     <div class="row"><span>Plan</span><b id="s_plan"></b></div>
     <div class="row"><span>Expires</span><b id="s_exp"></b></div>
     <div class="row"><span>Bound account</span><b id="s_uid"></b></div>
-    <div class="row"><span>Resets left today</span><b id="s_left"></b></div>
+    <div class="row"><span>Account resets</span><b>unlimited</b></div>
+    <div class="row"><span>Device</span><b>locked to first device</b></div>
     <button class="danger" id="reset">Unbind account</button>
   </div>
   <a class="back" href="/">← back</a>
@@ -64,7 +65,6 @@ $("check").onclick = async () => {
     $("s_plan").textContent = j.plan;
     $("s_exp").textContent = new Date(j.expires_at).toLocaleDateString();
     $("s_uid").textContent = j.bound_uid_masked;
-    $("s_left").textContent = j.resets_left_today;
     $("status").style.display = "block";
     say("");
   } catch { say("Network error.", "err"); }
@@ -76,7 +76,7 @@ $("reset").onclick = async () => {
   try {
     const r = await fetch("/api/self/reset-uid", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ license_key: key() }) });
     const j = await r.json();
-    if (!r.ok) return say({ bad_key: "Key not found.", revoked: "Key revoked.", limit_reached: "Daily reset limit reached. Try tomorrow." }[j.error] || "Reset failed.", "err");
+    if (!r.ok) return say({ bad_key: "Key not found.", revoked: "Key revoked.", hwid_locked: "Key is bound to another device." }[j.error] || "Reset failed.", "err");
     say("Unbound. Log in from the new account.", "ok");
     $("check").onclick();
   } catch { say("Network error.", "err"); }
