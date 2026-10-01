@@ -13,9 +13,21 @@ CREATE TABLE IF NOT EXISTS keys (
     expires_at      TIMESTAMPTZ NOT NULL,
     bound_uid       BIGINT,
     bound_hwid      TEXT,
+    max_devices     INT NOT NULL DEFAULT 1,
+    duration_days   INT NOT NULL DEFAULT 3,
     status          TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','revoked','suspended')),
     note            TEXT NOT NULL DEFAULT '',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Seats: one row per device. Independent expiry from first activation.
+CREATE TABLE IF NOT EXISTS key_devices (
+    key_id      BIGINT NOT NULL REFERENCES keys(id) ON DELETE CASCADE,
+    hwid        TEXT NOT NULL,
+    uid         BIGINT,
+    activated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at  TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (key_id, hwid)
 );
 
 -- UID history per key. Feeds anomaly detection (UID hopping = shared key).

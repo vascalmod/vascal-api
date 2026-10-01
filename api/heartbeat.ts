@@ -35,6 +35,12 @@ export async function POST(req: Request): Promise<Response> {
     if (new Date(k.rows[0].expires_at).getTime() < Date.now()) {
         return Response.json({ ok: false, error: "expired" }, { status: 401 });
     }
+    // Per-seat expiry: the session's uid seat must still be live.
+    const seat = await q(`SELECT expires_at FROM key_devices WHERE key_id = $1 AND uid = $2 LIMIT 1`, [Number(claims.key_id), Number(claims.uid)]);
+    if (seat.rows.length && new Date(seat.rows[0].expires_at).getTime() < Date.now()) {
+        await q(`UPDATE sessions SET revoked = TRUE WHERE jti = $1`, [claims.jti]);
+        return Response.json({ ok: false, error: "expired" }, { status: 401 });
+    }
 
     // Attestation: reported seal must match the release row for this build tag.
     if (typeof b?.seal === "string" && b.seal.length === 64) {

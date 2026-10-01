@@ -22,13 +22,16 @@ export async function POST(req: Request): Promise<Response> {
         return Response.json({ error: "bad_request" }, { status: 400 });
     }
     const field = b?.field === "hwid" ? "hwid" : b?.field === "both" ? "both" : "uid";
-    const r = await db().query(
-        field === "uid" ? `UPDATE keys SET bound_uid = NULL WHERE id = $1 RETURNING id`
-        : field === "hwid" ? `UPDATE keys SET bound_hwid = NULL WHERE id = $1 RETURNING id`
-        : `UPDATE keys SET bound_uid = NULL, bound_hwid = NULL WHERE id = $1 RETURNING id`,
-        [id]
-    );
-    if (!r.rows.length) return Response.json({ error: "not_found" }, { status: 404 });
+    const exists = await db().query(`SELECT id FROM keys WHERE id = $1 LIMIT 1`, [id]);
+    if (!exists.rows.length) return Response.json({ error: "not_found" }, { status: 404 });
+    if (field === "uid") {
+        await db().query(`UPDATE keys SET bound_uid = NULL WHERE id = $1`, [id]);
+        await db().query(`UPDATE key_devices SET uid = NULL WHERE key_id = $1`, [id]);
+    } else {
+        // hwid / both: delete seat rows (uids go with them), freeing the seats.
+        await db().query(`DELETE FROM key_devices WHERE key_id = $1`, [id]);
+        await db().query(`UPDATE keys SET bound_uid = NULL, bound_hwid = NULL WHERE id = $1`, [id]);
+    }
     await db().query(`UPDATE sessions SET revoked = TRUE WHERE key_id = $1`, [id]);
     await logEvent(id, field === "uid" ? "uid_reset" : field === "hwid" ? "hwid_reset" : "full_reset", clientIp(req), {});
     return Response.json({ ok: true });

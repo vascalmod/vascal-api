@@ -23,6 +23,7 @@ export async function POST(req: Request): Promise<Response> {
     const k = rows[0];
     if (k.status !== "active") return Response.json({ error: "revoked" }, { status: 401 });
     await db().query(`UPDATE keys SET bound_uid = NULL WHERE id = $1`, [k.id]);
+    await db().query(`UPDATE key_devices SET uid = NULL WHERE key_id = $1`, [k.id]);
     await db().query(`UPDATE sessions SET revoked = TRUE WHERE key_id = $1`, [k.id]);
     await logEvent(k.id, "uid_reset_self", ip, {});
     return Response.json({ ok: true });

@@ -25,21 +25,26 @@ export async function POST(req: Request): Promise<Response> {
     if (typeof b?.license_key !== "string") return Response.json({ error: "bad_request" }, { status: 400 });
     const hash = await sha256Hex(String(b.license_key).trim());
     const { rows } = await db().query(
-        `SELECT id, plan, expires_at, bound_uid, status FROM keys WHERE license_key_hash = $1 LIMIT 1`,
+        `SELECT id, plan, expires_at, status, max_devices, duration_days FROM keys WHERE license_key_hash = $1 LIMIT 1`,
         [hash]
     );
     if (!rows.length) return Response.json({ error: "bad_key" }, { status: 401 });
     const k = rows[0];
     if (k.status !== "active") return Response.json({ error: "revoked" }, { status: 401 });
-    const rc = await db().query(
-        `SELECT count(*)::int AS n FROM events WHERE key_id = $1 AND type = 'uid_reset_self' AND at > now() - interval '24 hours'`,
+    const seats = await db().query(
+        `SELECT hwid, uid, expires_at FROM key_devices WHERE key_id = $1 ORDER BY activated_at`,
         [k.id]
     );
-    const used = rc.rows[0]?.n ?? 0;
     return Response.json({
         plan: k.plan,
         expires_at: k.expires_at,
-        bound_uid_masked: maskUid(k.bound_uid === null ? null : Number(k.bound_uid)),
+        max_devices: Number(k.max_devices),
+        duration_days: Number(k.duration_days),
+        seats: seats.rows.map((r: any) => ({
+            hwid: String(r.hwid).slice(0, 8) + "…",
+            uid: r.uid === null ? null : maskUid(Number(r.uid)),
+            expires_at: r.expires_at,
+        })),
         resets_left_today: -1, // unlimited resets
     });
 }

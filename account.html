@@ -40,9 +40,9 @@
   <div class="card" id="status" style="display:none">
     <div class="row"><span>Plan</span><b id="s_plan"></b></div>
     <div class="row"><span>Expires</span><b id="s_exp"></b></div>
-    <div class="row"><span>Bound account</span><b id="s_uid"></b></div>
+    <div class="row"><span>Seats</span><b id="s_seats"></b></div>
+    <div id="seat_rows"></div>
     <div class="row"><span>Account resets</span><b>unlimited</b></div>
-    <div class="row"><span>Device</span><b>locked to first device</b></div>
     <button class="danger" id="reset">Unbind account</button>
   </div>
   <a class="back" href="/">← back</a>
@@ -64,7 +64,8 @@ $("check").onclick = async () => {
     }
     $("s_plan").textContent = j.plan;
     $("s_exp").textContent = new Date(j.expires_at).toLocaleDateString();
-    $("s_uid").textContent = j.bound_uid_masked;
+    $("s_seats").textContent = (j.seats ? j.seats.length : 0) + " / " + (j.max_devices ?? 1) + " devices × " + (j.duration_days ?? 3) + "d each";
+    $("seat_rows").innerHTML = (j.seats || []).map(x => `<div class="row"><span>📱 ${x.hwid}</span><b>${x.uid ?? "free"} → ${new Date(x.expires_at).toLocaleDateString()}</b></div>`).join("");
     $("status").style.display = "block";
     say("");
   } catch { say("Network error.", "err"); }
