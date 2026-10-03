@@ -32,7 +32,7 @@ export async function GET(req: Request): Promise<Response> {
                 return Response.json({ license_key: pt });
             }
             if (raction === "session") {
-                const { rows } = await q(`SELECT id, username, plan, status FROM resellers WHERE id = $1 LIMIT 1`, [rid]);
+                const { rows } = await q(`SELECT id, username, plan, status, max_keys, max_devices_per_key FROM resellers WHERE id = $1 LIMIT 1`, [rid]);
                 return Response.json({ reseller: rows[0] });
             }
             if (raction === "dashboard") return rDashboard(rid);
@@ -274,7 +274,8 @@ async function rGenerate(rid: number, req: Request): Promise<Response> {
     const me = await q(`SELECT max_keys, max_devices_per_key, status FROM resellers WHERE id = $1 LIMIT 1`, [rid]);
     if (!me.rows.length || me.rows[0].status !== "active") return Response.json({ error: "unauthorized" }, { status: 401 });
     const maxKeys = Number(me.rows[0].max_keys);
-    const maxDev = Math.max(1, Math.min(50, Number(b?.max_devices ?? me.rows[0].max_devices_per_key) || 1));
+    const resellerCap = Math.max(1, Math.min(50, Number(me.rows[0].max_devices_per_key) || 1));
+    const maxDev = Math.max(1, Math.min(resellerCap, Number(b?.max_devices ?? resellerCap) || 1));
     const durDays = Math.max(1, Math.min(365, Number(b?.duration_days ?? 3) || 3));
     const days = Math.max(1, Number(b?.days ?? 30) || 30);
     // Serialized against concurrent batches: lock the reseller row, recount
