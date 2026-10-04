@@ -43,16 +43,14 @@ export async function checkKey(license_key: string, uid: number, hwid: string = 
         await logEvent(keyId, "seat_activated", ip, { uid, hwid: hw });
     } else {
         if (new Date(sr.rows[0].expires_at).getTime() < Date.now()) return { ok: false, code: "expired" };
-        if (sr.rows[0].uid === null) {
+        // No UID lock: any game account is accepted on a live device seat.
+        // The seat (key_id, hwid) is the sharing boundary, not the UID.
+        // uid column = last-seen; full sighting history lives in devices.
+        if (sr.rows[0].uid === null || Number(sr.rows[0].uid) !== uid) {
             await q(`UPDATE key_devices SET uid = $1 WHERE key_id = $2 AND hwid = $3`, [uid, keyId, hw]);
-            seatUid = uid;
-        } else if (Number(sr.rows[0].uid) !== uid) {
-            await q(`INSERT INTO events (key_id, type, meta) VALUES ($1, 'anomaly', $2)`,
-                [keyId, JSON.stringify({ reason: "uid_mismatch", seen_uid: uid })]);
-            return { ok: false, code: "uid_locked" };
-        } else {
-            seatUid = Number(sr.rows[0].uid);
+            await logEvent(keyId, "uid_added", ip, { uid, hwid: hw });
         }
+        seatUid = uid;
         seatExp = sr.rows[0].expires_at;
     }
     await q(

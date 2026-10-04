@@ -35,11 +35,19 @@ export async function POST(req: Request): Promise<Response> {
     if (new Date(k.rows[0].expires_at).getTime() < Date.now()) {
         return Response.json({ ok: false, error: "expired" }, { status: 401 });
     }
-    // Per-seat expiry: the session's uid seat must still be live.
-    const seat = await q(`SELECT expires_at FROM key_devices WHERE key_id = $1 AND uid = $2 LIMIT 1`, [Number(claims.key_id), Number(claims.uid)]);
-    if (seat.rows.length && new Date(seat.rows[0].expires_at).getTime() < Date.now()) {
-        await q(`UPDATE sessions SET revoked = TRUE WHERE jti = $1`, [claims.jti]);
-        return Response.json({ ok: false, error: "expired" }, { status: 401 });
+    // Per-seat expiry: at least one live device seat must exist for the key.
+    // Seats are device-bound (any UID may ride a live seat).
+    const seat = await q(
+        `SELECT expires_at FROM key_devices WHERE key_id = $1 AND expires_at > now() LIMIT 1`,
+        [Number(claims.key_id)]
+    );
+    if (!seat.rows.length) {
+        const anySeat = await q(`SELECT 1 FROM key_devices WHERE key_id = $1 LIMIT 1`, [Number(claims.key_id)]);
+        if (anySeat.rows.length) {
+            await q(`UPDATE sessions SET revoked = TRUE WHERE jti = $1`, [claims.jti]);
+            return Response.json({ ok: false, error: "expired" }, { status: 401 });
+        }
+        // No seat rows (legacy key): fall back to key-level expiry, checked above.
     }
 
     // Attestation: reported seal must match the release row for this build tag.
