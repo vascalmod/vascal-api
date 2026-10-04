@@ -35,6 +35,10 @@ export async function POST(req: Request): Promise<Response> {
         `SELECT hwid, uid, expires_at FROM key_devices WHERE key_id = $1 ORDER BY activated_at`,
         [k.id]
     );
+    const uids = await db().query(
+        `SELECT uid, last_seen FROM devices WHERE key_id = $1 ORDER BY last_seen DESC`,
+        [k.id]
+    );
     return Response.json({
         plan: k.plan,
         expires_at: k.expires_at,
@@ -45,6 +49,9 @@ export async function POST(req: Request): Promise<Response> {
             uid: r.uid === null ? null : maskUid(Number(r.uid)),
             expires_at: r.expires_at,
         })),
-        resets_left_today: -1, // unlimited resets
+        uids: uids.rows.map((r: any) => ({
+            uid: maskUid(Number(r.uid)),
+            last_seen: r.last_seen,
+        })),
     });
 }
