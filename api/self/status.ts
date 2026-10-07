@@ -3,7 +3,7 @@ import { logEvent, clientIp } from "../../lib/validate.js";
 import { throttle } from "../../lib/rate-limit.js";
 
 // POST /api/self/status { license_key }
-// -> { plan, expires_at, bound_uid_masked, resets_left_today } | { error }
+// -> { plan, expires_at, max_devices, duration_days, seats[], uids[] } | { error }
 // Key-as-credential. Only safe fields leave the server.
 
 function maskUid(uid: number | null): string {

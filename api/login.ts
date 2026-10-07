@@ -37,7 +37,7 @@ export async function POST(req: Request): Promise<Response> {
         return Response.json({ error: "bad_nonce" }, { status: 401 });
     }
 
-    const v = await checkKey(license_key, game_uid, hwid);
+    const v = await checkKey(license_key, game_uid, hwid, ip);
     if (v.ok === false) {
         const code: string = v.code;
         await logEvent(null, "login_fail", ip, { code, uid: game_uid });
